@@ -22,11 +22,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.SIMATS.digitalpds.network.KitReceivedResponse
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.ui.theme.textGraySub
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+
+import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KitReceivedScreen(
+    kitData: KitReceivedResponse?,
     onBackClick: () -> Unit,
     onDashboardClick: () -> Unit,
     onHomeClick: () -> Unit = {},
@@ -35,180 +43,139 @@ fun KitReceivedScreen(
     onConsultClick: () -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Kit Received",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = BackgroundWhite,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onHomeClick,
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.Black) },
-                    label = { Text("Home", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = onKitsClick,
-                    icon = { Icon(Icons.Filled.ShoppingBag, contentDescription = "Kits", tint = Color.Black) },
-                    label = { Text("Kits", color = Color.Black) },
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onLearnClick,
-                    icon = { Icon(Icons.Filled.School, contentDescription = "Learn", tint = Color.Black) },
-                    label = { Text("Learn", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onConsultClick,
-                    icon = { Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Consult", tint = Color.Black) },
-                    label = { Text("Consult", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onProfileClick,
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profile", tint = Color.Black) },
-                    label = { Text("Profile", color = Color.Black) }
-                )
-            }
-        },
-        containerColor = BackgroundWhite
-    ) { paddingValues ->
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Success Illustration (Green Check)
-            Surface(
+            // Success Header
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFE0F2F1)
+                    .height(320.dp)
+                    .clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))
+                    .background(Brush.linearGradient(listOf(softBlue, cyanGradient))),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Success",
-                        tint = Color(0xFF2E7D32),
-                        modifier = Modifier.size(150.dp)
-                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(
+                        modifier = Modifier.size(120.dp).padding(10.dp),
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.2f),
+                        border = BorderStroke(2.dp, Color.White)
+                    ) {
+                        Icon(Icons.Default.Inventory, null, modifier = Modifier.padding(24.dp), tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Kit Received!", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    Text("Inventory update successful", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                "Family Kit Received!",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Household Receipt",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextBlack
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ReceiptItem("Father", "1 Adult Brush, 1 Fluoride Paste, 1 Mouthwash")
-                ReceiptItem("Mother", "1 Adult Brush, 1 Fluoride Paste, 1 Mouthwash")
-                ReceiptItem("Child", "1 Child Brush, 1 Fluoride Paste")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Hygiene Points Row
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFF5F7F9)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .offset(y = (-40).dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Receipt Card
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(10.dp, RoundedCornerShape(24.dp))
+                        .border(1.dp, PrimaryBlue.copy(alpha = 0.1f), RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Savings, // Mocking coin icon
-                        contentDescription = null,
-                        tint = TextBlack
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        "Hygiene Points",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextBlack,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF2E7D32))
-                    )
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Text("Household Receipt", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        ReceiptRow("Brushes", "${kitData?.brushReceived ?: 0} Units", Icons.Default.Brush)
+                        ReceiptRow("Pastes", "${kitData?.pasteReceived ?: 0} Units", Icons.Default.Waves)
+                        ReceiptRow("IEC Guides", "${kitData?.iecReceived ?: 0} Sets", Icons.Default.MenuBook)
+                        ReceiptRow("Return Verified", if (kitData?.oldKitReturned == true) "Yes" else "No", Icons.Default.Verified)
+                    }
+                }
+
+                if (kitData?.show_red_alert == true) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFFEF2F2),
+                        border = BorderStroke(1.dp, Color(0xFFFCA5A5))
+                    ) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = Color(0xFFDC2626), modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(kitData.red_alert_message ?: "Old kit pending return", color = Color(0xFFDC2626), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Points Area
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFF1F5F9).copy(alpha = 0.5f))
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = Color.White) {
+                            Icon(Icons.Default.Stars, null, modifier = Modifier.padding(10.dp), tint = Color(0xFFF59E0B))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Hygiene Points", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                            Text("Earned for timely receipt", fontSize = 12.sp, color = textGraySub)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text("+50", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Button(
+                    onClick = onDashboardClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .shadow(12.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = softBlue)
+                ) {
+                    Text("BACK TO DASHBOARD", fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Dashboard Button
-            Button(
-                onClick = onDashboardClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-            ) {
-                Text(
-                    "Back to Dashboard",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+fun ReceiptRow(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, modifier = Modifier.size(18.dp), tint = textGraySub)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(label, fontSize = 14.sp, color = textGraySub, fontWeight = FontWeight.Medium)
+        }
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
     }
 }
 
@@ -224,6 +191,10 @@ fun ReceiptItem(title: String, description: String) {
 @Composable
 fun KitReceivedScreenPreview() {
     DigitalpdsTheme {
-        KitReceivedScreen(onBackClick = {}, onDashboardClick = {})
+        KitReceivedScreen(
+            kitData = null,
+            onBackClick = {},
+            onDashboardClick = {}
+        )
     }
 }

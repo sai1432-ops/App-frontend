@@ -16,7 +16,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,10 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,9 +61,8 @@ fun InstantTeethAnalysisScreen(
     isLoading: Boolean = false
 ) {
     val context = LocalContext.current
-    val softBlue = Color(0xFF2E7DFF)
-    val lightGrey = Color(0xFFF8F9FA)
-    val textGraySub = Color(0xFF757575)
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
 
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -92,7 +91,6 @@ fun InstantTeethAnalysisScreen(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -111,7 +109,6 @@ fun InstantTeethAnalysisScreen(
                 selectedImageUri = Uri.fromFile(file)
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -119,345 +116,170 @@ fun InstantTeethAnalysisScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            cameraLauncher.launch()
-        } else {
-            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
-        }
+        if (isGranted) cameraLauncher.launch()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onCloseClick) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextBlack)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        },
-        containerColor = Color.White
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header with Gradient Backdrop
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(paddingValues)
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 120.dp)
+                    .fillMaxWidth()
+                    .height(240.dp)
+                    .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
+                    .background(Brush.linearGradient(listOf(softBlue, cyanGradient)))
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Instant Teeth Analysis",
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = softBlue
-                )
-                Text(
-                    text = "Powered by Advanced AI",
-                    fontSize = 16.sp,
-                    color = textGraySub,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    text = "Select Family Member",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextBlack
-                )
-                Text(
-                    text = "Choose who this analysis is for",
-                    fontSize = 14.sp,
-                    color = textGraySub
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(allMembers) { member ->
-                        FamilyMemberChip(
-                            member = member,
-                            isSelected = selectedMember?.id == member.id,
-                            onSelect = { selectedMember = member }
-                        )
+                Column(modifier = Modifier.padding(24.dp).padding(top = 24.dp)) {
+                    IconButton(
+                        onClick = onCloseClick,
+                        modifier = Modifier.background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Close, null, tint = Color.White)
                     }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Instant Scan", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White)
+                    Text("Powered by Bio-Cloud AI Engine", fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
                 }
+            }
 
-                if (selectedMember == null) {
-                    Text(
-                        text = "Please select a family member to continue.",
-                        color = Color.Red,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                AnalysisActionCard(
-                    title = "Take Photo",
-                    subtitle = "Capture a live image of your teeth using your camera.",
-                    icon = Icons.Default.CameraAlt,
-                    iconTint = softBlue,
-                    iconBg = softBlue.copy(alpha = 0.1f),
-                    enabled = selectedMember != null,
-                    onClick = {
-                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                AnalysisActionCard(
-                    title = "Upload from Gallery",
-                    subtitle = "Choose an existing high-resolution photo from your device.",
-                    icon = Icons.Default.PhotoLibrary,
-                    iconTint = Color(0xFF009688),
-                    iconBg = Color(0xFF009688).copy(alpha = 0.1f),
-                    enabled = selectedMember != null,
-                    onClick = {
-                        galleryLauncher.launch("image/*")
-                    }
-                )
-
-                AnimatedVisibility(
-                    visible = selectedBitmap != null,
-                    enter = fadeIn(animationSpec = tween(500)) + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
+            Column(
+                modifier = Modifier.padding(24.dp).offset(y = (-40).dp)
+            ) {
+                // Member Selector Card
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
                 ) {
-                    Column(modifier = Modifier.padding(top = 40.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Image Preview",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextBlack
-                            )
-                            IconButton(onClick = {
-                                selectedBitmap = null
-                                selectedImageUri = null
-                            }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Remove",
-                                    modifier = Modifier.size(20.dp)
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("Select Patient", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(allMembers) { member ->
+                                ModernMemberChip(
+                                    member = member,
+                                    isSelected = selectedMember?.id == member.id,
+                                    onSelect = { selectedMember = member },
+                                    accent = softBlue
                                 )
                             }
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
+                Text("Data Capture", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack, modifier = Modifier.padding(start = 4.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ModernActionBox(
+                        title = "Camera",
+                        icon = Icons.Default.CameraAlt,
+                        modifier = Modifier.weight(1f),
+                        accent = softBlue,
+                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                    )
+                    ModernActionBox(
+                        title = "Gallery",
+                        icon = Icons.Default.PhotoLibrary,
+                        modifier = Modifier.weight(1f),
+                        accent = Color(0xFF10B981),
+                        onClick = { galleryLauncher.launch("image/*") }
+                    )
+                }
+
+                AnimatedVisibility(visible = selectedBitmap != null) {
+                    Column(modifier = Modifier.padding(top = 32.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Image Preview", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                            Spacer(modifier = Modifier.weight(1f))
+                            TextButton(onClick = { selectedBitmap = null; selectedImageUri = null }) {
+                                Text("Clear", color = Color.Red.copy(alpha = 0.6f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(260.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(lightGrey)
-                                .shadow(1.dp, RoundedCornerShape(20.dp)),
-                            contentAlignment = Alignment.Center
+                                .clip(RoundedCornerShape(24.dp))
+                                .border(2.dp, softBlue.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                                .shadow(8.dp, RoundedCornerShape(24.dp))
                         ) {
                             selectedBitmap?.let {
-                                Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = "Selected Teeth Image",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
+                                Image(bitmap = it.asImageBitmap(), null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
+                
+                Spacer(modifier = Modifier.height(120.dp))
             }
+        }
 
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
-                tonalElevation = 8.dp,
-                color = Color.White
-            ) {
-                Button(
-                    onClick = {
-                        if (selectedImageUri != null && selectedMember != null) {
-                            onProceedClick(selectedImageUri, selectedMember!!.id)
-                        } else {
-                            Toast.makeText(context, "Please select member and image", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth()
-                        .height(60.dp),
-                    enabled = selectedBitmap != null && selectedMember != null && !isLoading,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = softBlue,
-                        disabledContainerColor = softBlue.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Text(
-                        text = if (selectedMember != null) {
-                            "Analyze for ${selectedMember?.name}"
-                        } else {
-                            "Analyze Teeth"
-                        },
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .clickable(enabled = false) { },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        modifier = Modifier.padding(32.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = softBlue)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Analyzing for ${selectedMember?.name}...",
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = TextBlack
-                            )
-                        }
+        // Bottom CTAs
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            tonalElevation = 12.dp,
+            color = Color.White
+        ) {
+            Button(
+                onClick = {
+                    if (selectedImageUri != null && selectedMember != null) {
+                        onProceedClick(selectedImageUri, selectedMember!!.id)
                     }
-                }
+                },
+                modifier = Modifier.padding(24.dp).fillMaxWidth().height(60.dp).shadow(12.dp, RoundedCornerShape(16.dp)),
+                enabled = selectedBitmap != null && selectedMember != null && !isLoading,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = softBlue)
+            ) {
+                Text("INITIATE AI SCAN", fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            }
+        }
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.White)
             }
         }
     }
 }
 
 @Composable
-fun FamilyMemberChip(
-    member: FamilyMember,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onSelect)
-            .width(72.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) Color(0xFF2E7DFF).copy(alpha = 0.1f) else Color(0xFFF8F9FA))
-                .border(
-                    width = if (isSelected) 2.dp else 0.dp,
-                    color = if (isSelected) Color(0xFF2E7DFF) else Color.Transparent,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
+fun ModernMemberChip(member: FamilyMember, isSelected: Boolean, onSelect: () -> Unit, accent: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onSelect() }.width(70.dp)) {
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = CircleShape,
+            color = if (isSelected) accent.copy(alpha = 0.1f) else Color(0xFFF1F5F9),
+            border = if (isSelected) BorderStroke(2.dp, accent) else null
         ) {
-            Image(
-                painter = painterResource(id = member.imageResId),
-                contentDescription = member.name,
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            InitialsAvatar(name = member.name, modifier = Modifier.padding(8.dp), fontSize = 18.sp)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = member.name,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color(0xFF2E7DFF) else Color.Black,
-            maxLines = 1,
-            textAlign = TextAlign.Center
-        )
+        Text(member.name, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSelected) accent else TextBlack, maxLines = 1)
     }
 }
 
 @Composable
-fun AnalysisActionCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: Color,
-    iconBg: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .shadow(elevation = if (enabled) 2.dp else 0.dp, shape = RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color.White else Color(0xFFF5F5F5)
-        )
+fun ModernActionBox(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    ElevatedCard(
+        modifier = modifier.height(140.dp).clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (enabled) iconBg else Color.LightGray.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (enabled) iconTint else Color.Gray,
-                    modifier = Modifier.size(28.dp)
-                )
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.1f)) {
+                Icon(icon, null, modifier = Modifier.padding(12.dp), tint = accent)
             }
-
-            Spacer(modifier = Modifier.width(20.dp))
-
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (enabled) TextBlack else Color.Gray
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 14.sp,
-                    color = if (enabled) Color(0xFF757575) else Color.Gray.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
-                )
-            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
         }
     }
 }

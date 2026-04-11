@@ -29,6 +29,8 @@ import com.SIMATS.digitalpds.network.AiDetection
 import com.SIMATS.digitalpds.network.AiPredictionResponse
 import com.SIMATS.digitalpds.ui.theme.*
 
+import androidx.compose.ui.graphics.Brush
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIScanReportScreen(
@@ -43,36 +45,34 @@ fun AIScanReportScreen(
     onConsultClick: () -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
-    val detections = analysisResult?.detections?.sortedByDescending { it.confidence } ?: emptyList()
-    val riskLevel = analysisResult?.riskLevel?.uppercase() ?: "LOW"
+    val detections = analysisResult?.detections
+        ?.groupBy { it.detectedClass }
+        ?.map { it.value.maxByOrNull { d -> d.confidence } ?: it.value.first() }
+        ?.sortedByDescending { it.confidence } ?: emptyList()
+    val rawRisk = analysisResult?.riskLevel?.trim()?.uppercase()
+    val msg = analysisResult?.message?.lowercase() ?: ""
+    val hasNoDetections = detections.isEmpty()
+    
+    val isAnalysisFaulty = msg.contains("invalid") || 
+            msg.contains("no teeth") || 
+            msg.contains("not recognized") || 
+            msg.contains("poor quality") ||
+            msg.contains("cannot analyze") ||
+            msg.contains("try again")
+
+    val riskLevel = when {
+        isAnalysisFaulty || rawRisk == "INVALID" -> "INVALID"
+        hasNoDetections && !msg.contains("teeth") && !msg.contains("dental") && !msg.contains("oral") -> "INVALID"
+        rawRisk == null && hasNoDetections -> "INVALID" // Catch spreadsheet-like cases
+        else -> rawRisk ?: "LOW"
+    }
     val highestFindingRaw = detections.firstOrNull()?.detectedClass ?: "None Detected"
     val highestFinding = mapClassName(highestFindingRaw)
 
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "AI Dental Analysis Report",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
         bottomBar = {
             UserBottomNavigationBar(
                 currentScreen = "Home",
@@ -83,228 +83,301 @@ fun AIScanReportScreen(
                 onProfileClick = onProfileClick
             )
         },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Scan Successfully Completed",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Your AI analysis is complete. Review your risk and findings below.",
-                    fontSize = 14.sp,
-                    color = TextGray,
-                    modifier = Modifier
-                        .padding(top = 4.dp)
-                        .weight(1f)
-                )
-                if (analysisResult != null) {
-                    Text(
-                        text = "Report #${analysisResult.reportId}",
-                        fontSize = 12.sp,
-                        color = TextGray.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(id = member.imageResId),
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE9EEF3)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = member.name,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                    Text(
-                        text = "Verified User",
-                        fontSize = 14.sp,
-                        color = TextGray
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Scanned Image",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Card(
+            // Gradient Header
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
             ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (imageUri != null) {
-                        Image(
-                            painter = rememberAsyncImagePainter(model = imageUri),
-                            contentDescription = "Analyzed Image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.ImageNotSupported,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = Color.LightGray
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "No image available", color = TextGray)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            AiSummarySection(primaryFinding = highestFinding, riskLevel = riskLevel)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            val (riskColor, riskHint) = when (riskLevel) {
-                "HIGH" -> Color(0xFFE53935) to "Urgent attention recommended."
-                "MEDIUM" -> Color(0xFFFB8C00) to "Some issues detected, consider a checkup."
-                "LOW" -> Color(0xFF43A047) to "No major issues detected."
-                else -> Color(0xFF43A047) to "No major issues detected."
-            }
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFF8F9FA),
-                border = BorderStroke(1.dp, Color(0xFFE9ECEF))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Overall Risk Assessment",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-
-                        Surface(
-                            color = riskColor.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(20.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
                         ) {
-                            Text(
-                                text = riskLevel,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                color = riskColor,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
                             )
                         }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            "Scan Analysis Report",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = riskHint,
+                        "AI-powered comprehensive dental evaluation completed successfully.",
                         fontSize = 14.sp,
-                        color = TextGray
+                        color = Color.White.copy(alpha = 0.8f)
                     )
+                    if (analysisResult != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "Report ID: #${analysisResult.reportId}",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Surface(
+                                color = Color.White.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Verified, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Verified Analysis",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                "Detailed Findings",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (detections.isEmpty()) {
-                Surface(
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // Member Info Card
+                ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF1F8E9)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF43A047))
-                        Spacer(modifier = Modifier.width(12.dp))
+                        InitialsAvatar(
+                            name = member.name,
+                            modifier = Modifier.size(50.dp),
+                            fontSize = 20.sp
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = member.name,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextBlack
+                            )
+                            Text(
+                                text = "Health Profile: ${member.riskLevel} Risk",
+                                fontSize = 13.sp,
+                                color = textGraySub
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Analyzed Image",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE9ECEF))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (imageUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(model = imageUri),
+                                contentDescription = "Analyzed Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.ImageNotSupported,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.LightGray
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(text = "No image available", color = TextGray)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                AiSummarySection(primaryFinding = highestFinding, riskLevel = riskLevel)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val (riskColor, riskHint) = when (riskLevel) {
+                    "HIGH" -> Color(0xFFC62828) to "Immediate professional attention is highly recommended."
+                    "MEDIUM" -> Color(0xFFEF6C00) to "We detected potential issues. Consider scheduling a checkup."
+                    "LOW" -> Color(0xFF2E7D32) to "Looking good! No major issues were detected in this scan area."
+                    "INVALID" -> Color(0xFFC62828) to "The image does not appear to be a clear scan of teeth. Please try again."
+                    else -> Color(0xFF2E7D32) to "Looking good! No major issues were detected in this scan area."
+                }
+
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Risk Assessment",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextBlack
+                            )
+
+                            Surface(
+                                color = riskColor.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, riskColor.copy(alpha = 0.2f))
+                            ) {
+                                Text(
+                                    text = riskLevel,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    color = riskColor,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         Text(
-                            "No issues detected. Your teeth look healthy.",
-                            color = Color(0xFF2E7D32),
+                            text = riskHint,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
+                            color = textGraySub,
+                            lineHeight = 20.sp
                         )
                     }
                 }
-            } else {
-                detections.forEachIndexed { index, detection ->
-                    DiseaseFindingCard(detection = detection, isPrimary = index == 0)
-                    Spacer(modifier = Modifier.height(12.dp))
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text(
+                    "Clinical Findings",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (riskLevel == "INVALID") {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFFFF1F0))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = null, tint = Color(0xFFC62828), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                "Invalid Image: Could not perform clinical analysis.",
+                                color = Color(0xFFC62828),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else if (detections.isEmpty()) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFF1F8E9))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                "No clinical issues detected in this scan area.",
+                                color = Color(0xFF2E7D32),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else {
+                    detections.forEachIndexed { index, detection ->
+                        DiseaseFindingCard(detection = detection, isPrimary = index == 0)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = onDoneClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                ) {
+                    Text("Complete Review", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = onDoneClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-            ) {
-                Text("Done", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -315,6 +388,7 @@ fun AiSummarySection(primaryFinding: String, riskLevel: String) {
         "LOW" -> "Maintain hygiene and regular checkups."
         "MEDIUM" -> "Schedule a dental consultation soon."
         "HIGH" -> "Consult a dentist urgently."
+        "INVALID" -> "Please rescan with a clearer teeth image."
         else -> "Maintain hygiene and regular checkups."
     }
 
@@ -361,112 +435,6 @@ fun SummaryItem(label: String, value: String, icon: androidx.compose.ui.graphics
     }
 }
 
-@Composable
-fun DiseaseFindingCard(detection: AiDetection, isPrimary: Boolean) {
-    val mappedName = mapClassName(detection.detectedClass)
-    val confidencePercent = (detection.confidence * 100)
-    val formattedConfidence = String.format("%.1f", confidencePercent)
-
-    val (confidenceLabel, confidenceColor) = when {
-        detection.confidence < 0.40f -> "Low Confidence" to Color.Gray
-        detection.confidence <= 0.70f -> "Moderate Confidence" to Color(0xFFFB8C00)
-        else -> "High Confidence" to Color(0xFFE53935)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, if (isPrimary) PrimaryBlue.copy(alpha = 0.3f) else Color(0xFFF1F3F5))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    if (isPrimary) {
-                        Surface(
-                            color = PrimaryBlue.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        ) {
-                            Text(
-                                "Primary Finding",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                color = PrimaryBlue,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    Text(
-                        text = "Detected: $mappedName",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = TextBlack
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "$formattedConfidence%",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryBlue
-                    )
-                    Text(
-                        text = confidenceLabel,
-                        fontSize = 10.sp,
-                        color = confidenceColor,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Surface(
-                color = Color(0xFFF8F9FA),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .padding(top = 2.dp),
-                        tint = TextGray.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "AI Insight: This may indicate early signs of $mappedName. Consider a dental checkup if symptoms persist.",
-                        fontSize = 12.sp,
-                        color = TextGray,
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun mapClassName(name: String): String {
-    return when (name) {
-        "ToothDiscoloration" -> "Tooth Discoloration"
-        "Caries" -> "Dental Caries (Cavities)"
-        "Gingivitis" -> "Gingivitis (Gum Inflammation)"
-        "Ulcer" -> "Mouth Ulcer"
-        else -> name.replace(Regex("([a-z])([A-Z])"), "$1 $2")
-    }
-}
 
 @Preview(showBackground = true)
 @Composable

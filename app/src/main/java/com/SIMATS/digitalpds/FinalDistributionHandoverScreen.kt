@@ -2,18 +2,18 @@ package com.SIMATS.digitalpds
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,169 +24,173 @@ import com.SIMATS.digitalpds.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinalDistributionHandoverScreen(
+    oldKitReturned: Boolean,
+    familyMemberCount: Int,
+    householdId: String,
+    headName: String,
+    category: String = "PHH",
     onBackClick: () -> Unit,
-    onCompleteClick: (Int, Int, Int, Int) -> Unit
+    onCompleteClick: (Int, Int, Int) -> Unit
 ) {
-    var adultBrushes by remember { mutableIntStateOf(0) }
-    var childBrushes by remember { mutableIntStateOf(0) }
-    var fluoridePaste by remember { mutableIntStateOf(0) }
-    var iecPamphlets by remember { mutableIntStateOf(0) }
+    val brushes = familyMemberCount
+    val fluoridePaste = familyMemberCount
+    val iecPamphlets = familyMemberCount
 
-    val isButtonEnabled = adultBrushes > 0 || childBrushes > 0 || fluoridePaste > 0 || iecPamphlets > 0
+    val isButtonEnabled = brushes > 0 || fluoridePaste > 0 || iecPamphlets > 0
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Final Distribution Handover",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
-        containerColor = BackgroundWhite
-    ) { paddingValues ->
-        Column(
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF4F7FB))) {
+        // Gradient Banner
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+                .fillMaxWidth()
+                .height(260.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(DealerGreen, Color(0xFF003322))
+                    )
+                )
+        )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FBFF)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE9EEF3)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = Color.Gray.copy(alpha = 0.5f)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Final Handover",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp), spotColor = Color(0x33000000)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Household: $householdId",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextBlack
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Head: $headName",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextBlack
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Old Kit Returned Badge
+                        val statusText = if (oldKitReturned) "Kit Return: Verified" else "Kit Not Returned"
+                        val statusColor = if (oldKitReturned) DealerGreen else Color(0xFFD32F2F)
+                        val statusIcon = if (oldKitReturned) Icons.Default.CheckCircle else Icons.Default.Cancel
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = statusColor.copy(alpha = 0.15f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = statusIcon,
+                                    contentDescription = null,
+                                    tint = statusColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = statusText,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Spacer(modifier = Modifier.height(36.dp))
+
+                Text(
+                    text = "Distribute Kits",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                DistributionItemRow(
+                    name = "Brushes",
+                    count = brushes
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                DistributionItemRow(
+                    name = "Fluoride Paste",
+                    count = fluoridePaste
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                DistributionItemRow(
+                    name = "IEC Pamphlets",
+                    count = iecPamphlets
+                )
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                Button(
+                    onClick = { onCompleteClick(brushes, fluoridePaste, iecPamphlets) },
+                    enabled = isButtonEnabled,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .shadow(if (isButtonEnabled) 8.dp else 0.dp, RoundedCornerShape(12.dp), spotColor = DealerGreen),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DealerGreen,
+                        disabledContainerColor = Color.LightGray
+                    )
+                ) {
                     Text(
-                        text = "Household ID: ****5612",
-                        fontSize = 18.sp,
+                        "Complete Distribution",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                    Text(
-                        text = "Head: Rajesh Kumar",
-                        fontSize = 15.sp,
-                        color = TextBlack
-                    )
-                    Text(
-                        text = "Category: PHH (Primary Household)",
-                        fontSize = 14.sp,
-                        color = TextGray
+                        color = Color.White
                     )
                 }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Kits for Handover",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            DistributionItemRow(
-                name = "Adult Brushes",
-                count = adultBrushes,
-                onIncrease = { adultBrushes++ },
-                onDecrease = { if (adultBrushes > 0) adultBrushes-- }
-            )
-            DistributionItemRow(
-                name = "Child Brushes",
-                count = childBrushes,
-                onIncrease = { childBrushes++ },
-                onDecrease = { if (childBrushes > 0) childBrushes-- }
-            )
-            DistributionItemRow(
-                name = "Fluoride Paste",
-                count = fluoridePaste,
-                onIncrease = { fluoridePaste++ },
-                onDecrease = { if (fluoridePaste > 0) fluoridePaste-- }
-            )
-            DistributionItemRow(
-                name = "IEC Pamphlets",
-                count = iecPamphlets,
-                onIncrease = { iecPamphlets++ },
-                onDecrease = { if (iecPamphlets > 0) iecPamphlets-- }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Old Kit Return: Verified",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = DealerGreen
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = DealerGreen,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Button(
-                onClick = { onCompleteClick(adultBrushes, childBrushes, fluoridePaste, iecPamphlets) },
-                enabled = isButtonEnabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
-                    disabledContainerColor = PrimaryBlue.copy(alpha = 0.5f)
-                )
-            ) {
-                Text(
-                    "Complete Distribution & Generate Receipt",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -194,49 +198,45 @@ fun FinalDistributionHandoverScreen(
 @Composable
 fun DistributionItemRow(
     name: String,
-    count: Int,
-    onIncrease: () -> Unit,
-    onDecrease: () -> Unit
+    count: Int
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Card(
+        modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0x11000000)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = count.toString(),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-            Text(
-                text = name,
-                fontSize = 14.sp,
-                color = TextGray
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onDecrease,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF1F4F8))
-            ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = TextBlack)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Auto-calculated based on members",
+                    fontSize = 13.sp,
+                    color = DealerGreen
+                )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            IconButton(
-                onClick = onIncrease,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF1F4F8))
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = DealerGreen.copy(alpha = 0.1f)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Increase", tint = TextBlack)
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = count.toString(),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DealerGreen
+                    )
+                }
             }
         }
     }
@@ -246,6 +246,13 @@ fun DistributionItemRow(
 @Composable
 fun FinalDistributionHandoverScreenPreview() {
     DigitalpdsTheme {
-        FinalDistributionHandoverScreen(onBackClick = {}, onCompleteClick = { _, _, _, _ -> })
+        FinalDistributionHandoverScreen(
+            oldKitReturned = true,
+            familyMemberCount = 4,
+            householdId = "HH-5612",
+            headName = "Rajesh Kumar",
+            onBackClick = {}, 
+            onCompleteClick = { _, _, _ -> }
+        )
     }
 }

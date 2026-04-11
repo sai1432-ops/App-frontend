@@ -23,12 +23,13 @@ class BeneficiaryViewModel : ViewModel() {
     var actionMessage by mutableStateOf<String?>(null)
         private set
 
-    fun fetchBeneficiaries(dealerId: Int) {
+    fun fetchBeneficiaries(token: String, dealerId: Int) {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
             try {
-                val response = RetrofitClient.apiService.getDealerBeneficiaries(dealerId)
+                val formattedToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+                val response = RetrofitClient.apiService.getDealerBeneficiaries(formattedToken, dealerId)
                 if (response.isSuccessful) {
                     beneficiaries = response.body() ?: emptyList()
                 } else {
@@ -43,12 +44,9 @@ class BeneficiaryViewModel : ViewModel() {
     }
 
     fun confirmKitByDealerQR(
-        dealerId: Int,
+        token: String,
+        dealerQrValue: String,
         beneficiaryId: Int,
-        oldKitReturned: Boolean,
-        brushReceived: Boolean,
-        pasteReceived: Boolean,
-        iecReceived: Boolean,
         onSuccess: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -57,18 +55,16 @@ class BeneficiaryViewModel : ViewModel() {
             actionMessage = null
             try {
                 val request = DealerQRConfirmRequest(
-                    dealerId = dealerId,
-                    beneficiaryId = beneficiaryId,
-                    oldKitReturned = oldKitReturned,
-                    brushReceived = brushReceived,
-                    pasteReceived = pasteReceived,
-                    iecReceived = iecReceived
+                    dealer_qr_value = dealerQrValue,
+                    beneficiaryId = beneficiaryId
                 )
 
-                val response = RetrofitClient.apiService.confirmKitByDealerQR(request)
+                val response = RetrofitClient.apiService.confirmKitByDealerQR(token, request)
                 if (response.isSuccessful) {
-                    actionMessage = response.body()?.message ?: "Kit confirmed successfully"
-                    fetchBeneficiaries(dealerId)
+                    val body = response.body()
+                    actionMessage = body?.message ?: "Kit created successfully"
+                    // If the response contains a dealerId, refresh the list
+                    body?.dealerId?.let { fetchBeneficiaries(token, it) }
                     onSuccess()
                 } else {
                     errorMessage = response.errorBody()?.string() ?: "Failed to confirm kit"

@@ -1,10 +1,10 @@
 package com.SIMATS.digitalpds.notification
 
-import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import java.util.Calendar
 
 object NotificationScheduler {
@@ -16,7 +16,6 @@ object NotificationScheduler {
         schedule(context, "EVENING_MISSED", 22, 0, 4)
     }
 
-    @SuppressLint("ScheduleExactAlarm")
     private fun schedule(context: Context, type: String, hour: Int, minute: Int, requestCode: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, NotificationReceiver::class.java).apply {
@@ -39,10 +38,21 @@ object NotificationScheduler {
             }
         }
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
-        )
+        // Use setAndAllowWhileIdle instead of setExactAndAllowWhileIdle to avoid SecurityException
+        // on Android 12+ without requiring special permissions. Brushing reminders don't need
+        // second-level precision.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                pendingIntent
+            )
+        } else {
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                pendingIntent
+            )
+        }
     }
 }

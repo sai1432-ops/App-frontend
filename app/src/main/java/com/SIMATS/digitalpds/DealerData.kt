@@ -5,17 +5,21 @@ import com.google.gson.annotations.SerializedName
 
 data class DealerInfo(
     val id: Int = 0,
-    val name: String,
-    @SerializedName("company_name") val companyName: String = "",
-    val phone: String,
-    val email: String = "",
-    val handle: String = "", // Kept for UI logic compatibility
-    val location: String = "", // Kept for UI logic compatibility
-    val activeStatus: String = "Active",
+    val name: String? = "",
+    @SerializedName("company_name") val companyName: String? = "",
+    val phone: String? = "",
+    val email: String? = "",
+    val handle: String? = "",
+    val location: String? = "",
+    val address: String? = "",
+    val city: String? = "",
+    val state: String? = "",
+    val username: String? = "",
+    val activeStatus: String? = "Active",
     val isOnline: Boolean = true,
     val imageRes: Int = R.drawable.user,
-    val password: String = "",
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val emailVerified: Boolean = false
 )
 
 data class Deal(

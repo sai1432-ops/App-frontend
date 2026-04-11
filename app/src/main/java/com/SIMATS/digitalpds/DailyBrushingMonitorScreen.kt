@@ -212,6 +212,7 @@ fun DailyBrushingMonitorScreen(
                             val newCount = currentBrushCount + 1
                             val request = BrushCountRequest(weeklyBrushCount = newCount)
                             val response = RetrofitClient.apiService.updateBrushCount(
+                                "Bearer ${SessionManager(context).getAccessToken() ?: ""}",
                                 memberId,
                                 request
                             )

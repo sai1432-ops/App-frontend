@@ -25,6 +25,12 @@ class SessionManager(context: Context) {
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_PDS_VERIFIED = "pds_verified"
         private const val KEY_USER_ROLE = "user_role"
+        private const val KEY_ACCESS_TOKEN = "access_token"
+        private const val KEY_PROFILE_IMAGE = "profile_image"
+        private const val KEY_DEALER_QR_VALUE = "dealer_qr_value"
+        private const val KEY_ASSIGNED_DEALER_ID = "assigned_dealer_id"
+        private const val KEY_ASSIGNED_DEALER_NAME = "assigned_dealer_name"
+        private const val KEY_ASSIGNED_DEALER_LOCATION = "assigned_dealer_location"
 
         private const val KEY_WEEKLY_SESSIONS_PREFIX = "weekly_sessions"
         private const val KEY_WEEKLY_COUNT_PREFIX = "weekly_count"
@@ -40,7 +46,10 @@ class SessionManager(context: Context) {
         email: String,
         phone: String,
         role: String,
-        pdsVerified: Boolean = false
+        pdsVerified: Boolean = false,
+        token: String? = null,
+        profileImage: String? = null,
+        dealerQrValue: String? = null
     ) {
         prefs.edit().apply {
             putInt(KEY_USER_ID, userId)
@@ -50,6 +59,9 @@ class SessionManager(context: Context) {
             putString(KEY_USER_ROLE, role)
             putBoolean(KEY_IS_LOGGED_IN, true)
             putBoolean(KEY_PDS_VERIFIED, pdsVerified)
+            putString(KEY_ACCESS_TOKEN, token)
+            putString(KEY_PROFILE_IMAGE, profileImage)
+            putString(KEY_DEALER_QR_VALUE, dealerQrValue)
             apply()
         }
     }
@@ -65,6 +77,27 @@ class SessionManager(context: Context) {
     fun getUserRole(): String? = prefs.getString(KEY_USER_ROLE, "user")
     fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
     fun isPdsVerified(): Boolean = prefs.getBoolean(KEY_PDS_VERIFIED, false)
+    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
+    fun getProfileImage(): String? = prefs.getString(KEY_PROFILE_IMAGE, null)
+    fun getDealerQrValue(): String? = prefs.getString(KEY_DEALER_QR_VALUE, null)
+
+    fun setAssignedDealerId(id: Int) {
+        prefs.edit().putInt(KEY_ASSIGNED_DEALER_ID, id).apply()
+    }
+
+    fun getAssignedDealerId(): Int = prefs.getInt(KEY_ASSIGNED_DEALER_ID, -1)
+
+    fun setAssignedDealerName(name: String) {
+        prefs.edit().putString(KEY_ASSIGNED_DEALER_NAME, name).apply()
+    }
+
+    fun getAssignedDealerName(): String? = prefs.getString(KEY_ASSIGNED_DEALER_NAME, null)
+
+    fun setAssignedDealerLocation(location: String) {
+        prefs.edit().putString(KEY_ASSIGNED_DEALER_LOCATION, location).apply()
+    }
+
+    fun getAssignedDealerLocation(): String? = prefs.getString(KEY_ASSIGNED_DEALER_LOCATION, null)
 
     private fun currentWeekStamp(): String {
         val calendar = Calendar.getInstance()
@@ -251,6 +284,12 @@ class SessionManager(context: Context) {
             remove(KEY_USER_ROLE)
             remove(KEY_IS_LOGGED_IN)
             remove(KEY_PDS_VERIFIED)
+            remove(KEY_ACCESS_TOKEN)
+            remove(KEY_PROFILE_IMAGE)
+            remove(KEY_DEALER_QR_VALUE)
+            remove(KEY_ASSIGNED_DEALER_ID)
+            remove(KEY_ASSIGNED_DEALER_NAME)
+            remove(KEY_ASSIGNED_DEALER_LOCATION)
             apply()
         }
     }

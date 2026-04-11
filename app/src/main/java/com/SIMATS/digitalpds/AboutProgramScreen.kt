@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.SIMATS.digitalpds.ui.theme.*
+
+import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,70 +37,21 @@ fun AboutProgramScreen(
     var feedbackText by remember { mutableStateOf("") }
     var selectedRating by remember { mutableIntStateOf(0) }
 
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "About Program & Feedback",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
+        bottomBar = {
+            UserBottomNavigationBar(
+                currentScreen = "Profile",
+                onHomeClick = onHomeClick,
+                onKitsClick = onKitsClick,
+                onLearnClick = onLearnClick,
+                onConsultClick = onConsultClick,
+                onProfileClick = onProfileClick
             )
         },
-        bottomBar = {
-            NavigationBar(
-                containerColor = BackgroundWhite,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onHomeClick,
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.Black) },
-                    label = { Text("Home", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onKitsClick,
-                    icon = { Icon(Icons.Filled.ShoppingBag, contentDescription = "Kits", tint = Color.Black) },
-                    label = { Text("Kits", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onLearnClick,
-                    icon = { Icon(Icons.Filled.School, contentDescription = "Learn", tint = Color.Black) },
-                    label = { Text("Learn", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onConsultClick,
-                    icon = { Icon(Icons.Filled.ChatBubble, contentDescription = "Consult", tint = Color.Black) },
-                    label = { Text("Consult", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = onProfileClick,
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profile", tint = Color.Black) },
-                    label = { Text("Profile", color = Color.Black) },
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-                )
-            }
-        },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -105,118 +59,139 @@ fun AboutProgramScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Emblem Banner
+            // Gradient Header with Emblem
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .background(Color(0xFF1E3A3A)), // Dark professional green
-                contentAlignment = Alignment.Center
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.gov), // Using existing emblem
-                    contentDescription = "Government Emblem",
-                    modifier = Modifier.size(120.dp),
-                    contentScale = ContentScale.Fit
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                        
+                        Text(
+                            "About Program",
+                            modifier = Modifier.align(Alignment.Center),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.gov),
+                        contentDescription = "Gov Emblem",
+                        modifier = Modifier.size(72.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
 
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(
-                    text = "Mission Goals",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextBlack
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Our mission is to ensure every Indian has access to affordable oral healthcare and essential hygiene products. We aim to distribute subsidized kits and provide digital resources for improved oral health.",
-                    fontSize = 14.sp,
-                    color = TextGray,
-                    lineHeight = 20.sp
-                )
+            Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Family Illustration
-                Image(
-                    painter = painterResource(id = R.drawable.fam),
-                    contentDescription = "Happy Family",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    text = "Your Feedback",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextBlack
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "We value your input! Please rate your experience with the program and share any comments or suggestions.",
-                    fontSize = 14.sp,
-                    color = TextGray
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Rating Chips
-                Row(
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // Mission Card
+                ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
                 ) {
-                    repeat(3) { index ->
-                        val rating = index + 1
-                        Surface(
-                            modifier = Modifier
-                                .size(60.dp, 40.dp)
-                                .clickable { selectedRating = rating },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (selectedRating == rating) PrimaryBlue.copy(alpha = 0.1f) else Color(0xFFF8FAFC),
-                            border = BorderStroke(1.dp, if (selectedRating == rating) PrimaryBlue else Color(0xFFE2E8F0))
-                        ) {
-                            // Placeholder for emoji or number
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Stars, contentDescription = null, tint = softBlue, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Our Mission", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "To ensure every Indian has access to affordable oral healthcare and essential hygiene products through digital innovation and subsidized kits.",
+                            fontSize = 14.sp,
+                            color = textGraySub,
+                            lineHeight = 22.sp
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = feedbackText,
-                    onValueChange = { feedbackText = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    placeholder = { Text("Write your feedback here...") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
-                )
-
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Button(
-                    onClick = { /* Submit logic */ },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                ) {
-                    Text("Submit Feedback", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
+                Text("Your Feedback", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                Spacer(modifier = Modifier.height(16.dp))
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("Rate your experience", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = textGraySub)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            val ratings = listOf("😞", "😐", "😊", "🤩")
+                            ratings.forEachIndexed { index, emoji ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(if (selectedRating == index + 1) softBlue.copy(alpha = 0.1f) else Color(0xFFF8FAFC))
+                                        .border(2.dp, if (selectedRating == index + 1) softBlue else Color.Transparent, RoundedCornerShape(16.dp))
+                                        .clickable { selectedRating = index + 1 },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(emoji, fontSize = 28.sp)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        OutlinedTextField(
+                            value = feedbackText,
+                            onValueChange = { feedbackText = it },
+                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                            placeholder = { Text("Share your thoughts...", color = Color.LightGray) },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = softBlue,
+                                unfocusedBorderColor = Color(0xFFE2E8F0),
+                                focusedContainerColor = Color(0xFFF8FAFC),
+                                unfocusedContainerColor = Color(0xFFF8FAFC)
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = { /* Submit */ },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = softBlue)
+                        ) {
+                            Text("Submit Feedback", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
+            
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }

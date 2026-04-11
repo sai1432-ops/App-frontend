@@ -10,7 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.SIMATS.digitalpds.network.BrushingSessionItem
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.ui.theme.textGraySub
+import androidx.compose.material.icons.filled.*
+import com.SIMATS.digitalpds.UserBottomNavigationBar
+import com.SIMATS.digitalpds.InitialsAvatar
+import androidx.compose.ui.graphics.Brush
 
 data class MonthlyUsageData(
     val name: String,
@@ -34,215 +39,193 @@ data class MonthlyUsageData(
     val imageRes: Int = R.drawable.user
 )
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonthlyUsageScreen(
     monthYear: String = "Current Month",
     usageItems: List<MonthlyUsageData> = emptyList(),
-    dailyRecords: List<BrushingSessionItem> = emptyList(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onHomeClick: () -> Unit = {},
+    onKitsClick: () -> Unit = {},
+    onLearnClick: () -> Unit = {},
+    onConsultClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Monthly Usage",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
+        bottomBar = {
+            UserBottomNavigationBar(
+                currentScreen = "Kits",
+                onHomeClick = onHomeClick,
+                onKitsClick = onKitsClick,
+                onLearnClick = onLearnClick,
+                onConsultClick = onConsultClick,
+                onProfileClick = onProfileClick
             )
         },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                monthYear,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (usageItems.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No usage data recorded yet.", color = TextGray)
-                }
-            } else {
-                usageItems.forEach { item ->
-                    UsageItem(
-                        name = item.name,
-                        days = item.days,
-                        score = item.score,
-                        progress = item.progress,
-                        pasteConsumption = item.pasteConsumption,
-                        brushCondition = item.brushCondition,
-                        imageRes = item.imageRes
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                "Brushing Records",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (dailyRecords.isEmpty()) {
-                Text("No brushing records for this month yet.", color = TextGray)
-            } else {
-                dailyRecords.forEach { record ->
-                    MonthlyRecordCard(record)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun MonthlyRecordCard(record: BrushingSessionItem) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 10.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(record.date, fontWeight = FontWeight.Bold, color = TextBlack)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Morning: ${if (record.morning) "Done" else "Missed"}  •  Evening: ${if (record.evening) "Done" else "Missed"}",
-                    color = TextGray,
-                    fontSize = 13.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun UsageItem(
-    name: String,
-    days: String,
-    score: Int,
-    progress: Float,
-    pasteConsumption: String,
-    brushCondition: String,
-    imageRes: Int
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = name,
+            // Gradient Header
+            Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE9EEF3)),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextBlack)
-                Text(days, fontSize = 14.sp, color = TextGray)
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .width(80.dp)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = Color.Black,
-                        trackColor = Color.LightGray.copy(alpha = 0.3f)
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            "Monthly Usage",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Detailed breakdown of brushing sessions and resource consumption for $monthYear.",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(score.toString(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                 Text(
-                    "Paste Consumption",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    "Usage Leaderboard",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     color = TextBlack
                 )
-                Text(pasteConsumption, fontSize = 14.sp, color = TextBlack)
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Brush Condition",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextBlack
-                )
-                Text(brushCondition, fontSize = 14.sp, color = TextBlack)
+                if (usageItems.isEmpty()) {
+                    EmptyStateCard("No usage data recorded for this month.")
+                } else {
+                    usageItems.forEach { item ->
+                        ModernUsageCard(item)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+@Composable
+fun ModernUsageCard(item: MonthlyUsageData) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                InitialsAvatar(
+                    name = item.name,
+                    modifier = Modifier.size(56.dp),
+                    fontSize = 20.sp
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TextBlack)
+                    Text(item.days, fontSize = 12.sp, color = textGraySub)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "${item.score}%",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp,
+                        color = PrimaryBlue
+                    )
+                    Text("Adherence", fontSize = 10.sp, color = textGraySub)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            LinearProgressIndicator(
+                progress = { item.progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = PrimaryBlue,
+                trackColor = PrimaryBlue.copy(alpha = 0.1f)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                UsageMetricCol("Paste Level", item.pasteConsumption, Icons.Default.Opacity, Color(0xFF03A9F4))
+                Spacer(modifier = Modifier.width(16.dp))
+                UsageMetricCol("Brush State", item.brushCondition, Icons.Default.Create, Color(0xFF4CAF50))
+            }
+        }
+    }
+}
+
+@Composable
+fun RowScope.UsageMetricCol(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+    Row(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.05f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = color)
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(label, fontSize = 10.sp, color = textGraySub, fontWeight = FontWeight.Medium)
+            Text(value, fontSize = 13.sp, color = TextBlack, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun EmptyStateCard(message: String) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+    ) {
+        Box(modifier = Modifier.padding(32.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text(message, color = textGraySub, fontSize = 14.sp)
+        }
     }
 }
 

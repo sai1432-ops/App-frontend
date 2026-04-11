@@ -3,20 +3,23 @@ package com.SIMATS.digitalpds
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.*
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -28,13 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.network.RetrofitClient
+import com.SIMATS.digitalpds.network.StockRequestBody
 
 data class StockRequestData(
     val id: String = "",
-    val adultQty: Int = 0,
-    val childQty: Int = 0,
-    val pasteQty: Int = 0,
-    val iecQty: Int = 0,
+    val totalKits: Int = 0,
     val urgency: String = "Normal"
 )
 
@@ -76,10 +78,7 @@ fun RequestStockScreen(
     val sessionManager = remember { SessionManager(context) }
     val dealerId = sessionManager.getUserId()
 
-    var adultBrushQty by remember { mutableStateOf("0") }
-    var childBrushQty by remember { mutableStateOf("0") }
-    var pasteQty by remember { mutableStateOf("0") }
-    var iecQty by remember { mutableStateOf("0") }
+    var totalKits by remember { mutableStateOf("0") }
     var urgency by remember { mutableStateOf("Normal") }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -94,18 +93,12 @@ fun RequestStockScreen(
 
     LaunchedEffect(dealerViewModel.stockRequestSuccess) {
         if (dealerViewModel.stockRequestSuccess) {
-            val a = adultBrushQty.toIntOrNull() ?: 0
-            val c = childBrushQty.toIntOrNull() ?: 0
-            val p = pasteQty.toIntOrNull() ?: 0
-            val i = iecQty.toIntOrNull() ?: 0
+            val kits = totalKits.toIntOrNull() ?: 0
 
             onSubmitSuccess(
                 StockRequestData(
                     id = dealerViewModel.latestStockRequestId ?: "",
-                    adultQty = a,
-                    childQty = c,
-                    pasteQty = p,
-                    iecQty = i,
+                    totalKits = kits,
                     urgency = urgency
                 )
             )
@@ -113,159 +106,305 @@ fun RequestStockScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Request New Stock",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
-        containerColor = BackgroundWhite
-    ) { paddingValues ->
-        Column(
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF4F7FB))) {
+        // Gradient Banner
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "Inventory Summary",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                        Text(
-                            text = "Available Units: 1200",
-                            fontSize = 14.sp,
-                            color = TextGray
-                        )
-                    }
-                    Image(
-                        painter = painterResource(id = R.drawable.howp),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                .fillMaxWidth()
+                .height(260.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(DealerGreen, Color(0xFF003322))
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Requested Items",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RequestItemRow("Adult Brush", adultBrushQty) { adultBrushQty = it }
-            RequestItemRow("Child Brush", childBrushQty) { childBrushQty = it }
-            RequestItemRow("Paste", pasteQty) { pasteQty = it }
-            RequestItemRow("IEC Materials", iecQty) { iecQty = it }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Urgency Level",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                UrgencyChip(
-                    label = "Normal",
-                    isSelected = urgency == "Normal",
-                    onClick = { urgency = "Normal" }
                 )
-                UrgencyChip(
-                    label = "Urgent (Stock Critical)",
-                    isSelected = urgency == "Urgent",
-                    onClick = { urgency = "Urgent" }
-                )
-            }
+        )
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            if (dealerViewModel.stockRequestLoading) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = PrimaryBlue)
-                }
-            } else {
-                Button(
-                    onClick = {
-                        val a = adultBrushQty.toIntOrNull() ?: 0
-                        val c = childBrushQty.toIntOrNull() ?: 0
-                        val p = pasteQty.toIntOrNull() ?: 0
-                        val i = iecQty.toIntOrNull() ?: 0
-
-                        dealerViewModel.submitStockRequest(
-                            dealerId = dealerId,
-                            adultBrushQty = a,
-                            childBrushQty = c,
-                            pasteQty = p,
-                            iecQty = i,
-                            urgency = urgency
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Request New Stock",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                ) {
-                    Text(
-                        "Submit Stock Request",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+                // Modern Inventory Summary Card
+                Card(
+                    modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp), spotColor = Color(0x33000000)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Inventory Summary",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextBlack
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Current stock level requires topping up.",
+                                fontSize = 13.sp,
+                                color = TextGray
+                            )
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = DealerGreen.copy(alpha = 0.15f),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = DealerGreen, modifier = Modifier.padding(14.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(56.dp))
+
+                Text(
+                    text = "Request Quantity",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Specify how many complete kits you need.",
+                    fontSize = 13.sp,
+                    color = TextGray
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+
+                RequestItemRow(
+                    title = "Complete Kits",
+                    subtitle = "All items included",
+                    value = totalKits,
+                    icon = Icons.Default.Inventory,
+                    onValueChange = { totalKits = it }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Kit Composition Card (Explaining the 1:1:1 ratio)
+                Card(
+                    modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0x1A000000)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                    border = BorderStroke(1.dp, Color(0xFFE5E7EB))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Kit Composition (1:1:1)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DealerGreen,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            KitPart(icon = Icons.Default.Inventory, label = "1 Brush")
+                            VerticalDivider(modifier = Modifier.height(24.dp), color = Color(0xFFCBD5E1))
+                            KitPart(icon = Icons.Default.Inventory, label = "1 Paste")
+                            VerticalDivider(modifier = Modifier.height(24.dp), color = Color(0xFFCBD5E1))
+                            KitPart(icon = Icons.Default.Description, label = "1 Flyer")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(36.dp))
+
+                Text(
+                    text = "Urgency Level",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        UrgencyChip(
+                            label = "Routine",
+                            isSelected = urgency == "Normal",
+                            onClick = { urgency = "Normal" },
+                            isUrgent = false
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        UrgencyChip(
+                            label = "Critical",
+                            isSelected = urgency == "Urgent",
+                            onClick = { urgency = "Urgent" },
+                            isUrgent = true
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                if (dealerViewModel.stockRequestLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = DealerGreen)
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            val kits = totalKits.toIntOrNull() ?: 0
+                            if (kits > 0) {
+                                val token = sessionManager.getAccessToken() ?: ""
+                                dealerViewModel.submitStockRequest(
+                                    dealerId = dealerId,
+                                    token = token,
+                                    totalKits = kits,
+                                    urgency = urgency
+                                )
+                            } else {
+                                dealerViewModel.stockRequestMessage = "Please enter kit quantity"
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .shadow(8.dp, RoundedCornerShape(12.dp), spotColor = DealerGreen),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DealerGreen)
+                    ) {
+                        Text(
+                            "Submit Stock Request",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
+    }
+}
+
+@Composable
+fun RequestItemRow(
+    title: String,
+    subtitle: String,
+    value: String,
+    icon: ImageVector,
+    onValueChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0x11000000)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFF3F4F6),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(icon, contentDescription = null, tint = DealerGreen, modifier = Modifier.padding(12.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                Text(subtitle, fontSize = 12.sp, color = TextGray)
+            }
+            OutlinedTextField(
+                value = value,
+                onValueChange = {
+                    if (it.all { char -> char.isDigit() }) onValueChange(it)
+                },
+                modifier = Modifier.width(80.dp),
+                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = DealerGreen,
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun UrgencyChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    isUrgent: Boolean
+) {
+    val activeColor = if (isUrgent) Color(0xFFD32F2F) else DealerGreen
+    val activeBgColor = if (isUrgent) Color(0xFFFFEBEE) else DealerGreen.copy(alpha = 0.1f)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) activeBgColor else Color(0xFFF1F4F8),
+        border = if (isSelected) BorderStroke(1.dp, activeColor) else null
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 14.dp)) {
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) activeColor else TextGray
+            )
+        }
+    }
+}
+
+@Composable
+fun KitPart(icon: ImageVector, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = null, tint = DealerGreen.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = TextBlack)
     }
 }
 
@@ -275,197 +414,84 @@ fun StockRequestSuccessScreen(
     requestData: StockRequestData,
     onBackToInventory: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Request New Stock",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = BackgroundWhite
-                )
-            )
-        },
-        containerColor = BackgroundWhite
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF4F7FB))) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.38f)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color(0xFF003322), Color(0xFF004D40))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = CircleShape,
+                color = DealerGreen.copy(alpha = 0.15f),
+                modifier = Modifier.size(100.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(160.dp),
-                    tint = Color(0xFF4CAF50)
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Success",
+                    tint = DealerGreen,
+                    modifier = Modifier.padding(20.dp).fillMaxSize()
                 )
             }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.62f)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Stock Request Submitted!",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = TextAlign.Center,
-                    color = TextBlack
-                )
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Request ID: #${requestData.id.ifBlank { "REQ-${System.currentTimeMillis()}" }}",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Adult Brushes, Child Brushes,\nPaste, IEC Materials",
-                            fontSize = 14.sp,
-                            color = TextGray,
-                            lineHeight = 18.sp
-                        )
-                    }
-
-                    Image(
-                        painter = painterResource(id = R.drawable.howp),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(90.dp, 65.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    "Your request is being reviewed by the District Warehouse.",
-                    textAlign = TextAlign.Center,
-                    color = TextGray,
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Button(
-                    onClick = onBackToInventory,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                ) {
-                    Text(
-                        "Back to Inventory",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RequestItemRow(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             Text(
-                text = "Quantity",
-                fontSize = 12.sp,
-                color = TextGray
-            )
-            Text(
-                text = label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
+                "Request Sent!",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
                 color = TextBlack
             )
-        }
-
-        OutlinedTextField(
-            value = value,
-            onValueChange = {
-                if (it.all { char -> char.isDigit() }) onValueChange(it)
-            },
-            modifier = Modifier.width(90.dp),
-            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = DealerGreen,
-                unfocusedBorderColor = Color.LightGray
+            
+            Text(
+                "Your stock request has been submitted to the admin.",
+                fontSize = 16.sp,
+                color = TextGray,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
-        )
-    }
-}
-
-@Composable
-fun UrgencyChip(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) DealerGreen.copy(alpha = 0.1f) else Color(0xFFF1F4F8),
-        border = if (isSelected) BorderStroke(1.dp, DealerGreen) else null
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isSelected) DealerGreen else TextBlack
-        )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("REQUEST SUMMARY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextGray)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Kits Requested", fontSize = 16.sp, color = TextBlack)
+                        Text("${requestData.totalKits}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = DealerGreen)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Urgency", fontSize = 16.sp, color = TextBlack)
+                        Text(requestData.urgency.uppercase(), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (requestData.urgency == "Urgent") Color.Red else DealerGreen)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            Button(
+                onClick = onBackToInventory,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DealerGreen)
+            ) {
+                Text("Back to Dashboard", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun SuccessScreenPreview() {
-    DigitalpdsTheme {
-        StockRequestSuccessScreen(StockRequestData(id = "ORD-98765"), {})
-    }
+    StockRequestSuccessScreen(StockRequestData(id = "ORD-98765", totalKits = 10, urgency = "Urgent"), {})
 }

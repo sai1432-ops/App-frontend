@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,172 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.SIMATS.digitalpds.network.AdminStockRequestDto
-import com.SIMATS.digitalpds.network.RejectStockRequestBody
-import com.SIMATS.digitalpds.network.RetrofitClient
 import com.SIMATS.digitalpds.ui.theme.*
-import kotlinx.coroutines.launch
-
-enum class StockRequestStatus {
-    PENDING, APPROVED, DISPATCHED, REJECTED
-}
-
-data class AdminStockRequest(
-    val id: Int,
-    val itemIds: List<Int>, // List of individual database IDs for bulk actions
-    val requestId: String,
-    val dealerId: String,
-    val dealerName: String,
-    val location: String,
-    val kitType: String,
-    val quantity: String,
-    val status: StockRequestStatus,
-    val requestDate: String,
-    val approvedAt: String? = null,
-    val rejectedAt: String? = null,
-    val dispatchedAt: String? = null,
-    val adminNote: String? = null,
-    val courierName: String? = null,
-    val trackingId: String? = null
-)
-
-class StockViewModel : ViewModel() {
-    var requests by mutableStateOf<List<AdminStockRequest>>(emptyList())
-    var isLoading by mutableStateOf(false)
-    var message by mutableStateOf<String?>(null)
-
-    fun fetchRequests() {
-        viewModelScope.launch {
-            isLoading = true
-            try {
-                val response = RetrofitClient.apiService.getAdminStockRequests()
-                if (response.isSuccessful) {
-                    val rawList = response.body() ?: emptyList()
-                    
-                    // Group requests by requestId to avoid showing multiple cards for one order
-                    val grouped = rawList.groupBy { it.requestId }
-                    
-                    requests = grouped.map { (gid, dtos) ->
-                        val first = dtos.first()
-                        
-                        // Aggregate items summary
-                        val itemsSummary = dtos.joinToString(", ") { "${it.kitType} (${it.quantity})" }
-                        
-                        AdminStockRequest(
-                            id = first.id,
-                            itemIds = dtos.map { it.id },
-                            requestId = gid,
-                            dealerId = first.dealerId.toString(),
-                            dealerName = first.dealerName,
-                            location = first.location,
-                            kitType = itemsSummary,
-                            quantity = "${dtos.size} Item Types",
-                            status = when (first.status.uppercase()) {
-                                "APPROVED" -> StockRequestStatus.APPROVED
-                                "DISPATCHED" -> StockRequestStatus.DISPATCHED
-                                "REJECTED" -> StockRequestStatus.REJECTED
-                                else -> StockRequestStatus.PENDING
-                            },
-                            requestDate = first.requestDate,
-                            approvedAt = first.approvedAt,
-                            rejectedAt = first.rejectedAt,
-                            dispatchedAt = first.dispatchedAt,
-                            adminNote = first.adminNote,
-                            courierName = first.courierName,
-                            trackingId = first.trackingId
-                        )
-                    }.sortedByDescending { it.requestDate }
-                } else {
-                    message = "Failed to load stock requests"
-                }
-            } catch (e: Exception) {
-                message = e.message ?: "Something went wrong"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    fun approveRequest(group: AdminStockRequest, onDone: () -> Unit = {}) {
-        viewModelScope.launch {
-            var allSuccess = true
-            for (id in group.itemIds) {
-                try {
-                    val response = RetrofitClient.apiService.approveStockRequest(id)
-                    if (!response.isSuccessful) allSuccess = false
-                } catch (e: Exception) {
-                    allSuccess = false
-                }
-            }
-            
-            if (allSuccess) {
-                message = "Request group approved"
-                fetchRequests()
-                onDone()
-            } else {
-                message = "Failed to approve some items in the request"
-            }
-        }
-    }
-
-    fun dispatchRequest(group: AdminStockRequest, onDone: () -> Unit = {}) {
-        viewModelScope.launch {
-            var allSuccess = true
-            for (id in group.itemIds) {
-                try {
-                    val response = RetrofitClient.apiService.dispatchStockRequest(id)
-                    if (!response.isSuccessful) allSuccess = false
-                } catch (e: Exception) {
-                    allSuccess = false
-                }
-            }
-            
-            if (allSuccess) {
-                message = "Request group dispatched"
-                fetchRequests()
-                onDone()
-            } else {
-                message = "Failed to dispatch some items"
-            }
-        }
-    }
-
-    fun rejectRequest(group: AdminStockRequest, reason: String, onDone: () -> Unit = {}) {
-        viewModelScope.launch {
-            var allSuccess = true
-            for (id in group.itemIds) {
-                try {
-                    val response = RetrofitClient.apiService.rejectStockRequest(
-                        id,
-                        RejectStockRequestBody(reason.ifBlank { null })
-                    )
-                    if (!response.isSuccessful) allSuccess = false
-                } catch (e: Exception) {
-                    allSuccess = false
-                }
-            }
-            
-            if (allSuccess) {
-                message = "Request group rejected"
-                fetchRequests()
-                onDone()
-            } else {
-                message = "Failed to reject some items"
-            }
-        }
-    }
-
-    fun clearMessage() {
-        message = null
-    }
-}
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -189,11 +32,12 @@ fun AdminStockRequestsScreen(
     viewModel: StockViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val token = remember { SessionManager(context).getAccessToken() ?: "" }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
 
     LaunchedEffect(Unit) {
-        viewModel.fetchRequests()
+        viewModel.fetchRequests(token)
     }
 
     LaunchedEffect(viewModel.message) {
@@ -207,66 +51,94 @@ fun AdminStockRequestsScreen(
 
     var showConfirmDialog by remember { mutableStateOf<Pair<AdminStockRequest, StockRequestStatus>?>(null) }
     var rejectionReason by remember { mutableStateOf("") }
+    var courierName by remember { mutableStateOf("") }
+    var trackingId by remember { mutableStateOf("") }
+    var adminNote by remember { mutableStateOf("") }
 
     val pendingCount = requests.count { it.status == StockRequestStatus.PENDING }
+    val primaryRed = Color(0xFFD32F2F)
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(Color.White).padding(horizontal = 16.dp)) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("Stock Requests", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-                        Text("Manage dealer inventory", fontSize = 14.sp, color = TextGray)
-                    }
-                    Surface(
-                        color = Color(0xFF1A1C1E),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            "Pending: $pendingCount",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+            Column(
+                modifier = Modifier
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(primaryRed, primaryRed.copy(alpha = 0.8f))
                         )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by dealer or request ID...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryBlue,
-                        unfocusedBorderColor = Color.LightGray,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    ),
-                    singleLine = true
+                    )
+                    .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Stock Requests",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    actions = {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(end = 16.dp)
+                        ) {
+                            Text(
+                                "Pending: $pendingCount",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White.copy(alpha = 0.2f)
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search by dealer or ID...", color = Color.White.copy(alpha = 0.7f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = Color.White,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        singleLine = true
+                    )
+                }
+
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    val filters = listOf("All", "Pending", "Approved", "Dispatched", "Rejected")
+                    val filters = listOf("All", "Pending", "Approved", "Dispatched", "Delivered", "Rejected")
                     items(filters) { filter ->
-                        FilterTab(
+                        FilterTabPremium(
                             label = filter,
                             isSelected = selectedFilter == filter,
-                            onClick = { selectedFilter = filter }
+                            onClick = { selectedFilter = filter },
+                            selectedColor = Color.White,
+                            unselectedColor = Color.White.copy(alpha = 0.3f)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         },
         bottomBar = {
@@ -282,6 +154,7 @@ fun AdminStockRequestsScreen(
                 "Pending" -> it.status == StockRequestStatus.PENDING
                 "Approved" -> it.status == StockRequestStatus.APPROVED
                 "Dispatched" -> it.status == StockRequestStatus.DISPATCHED
+                "Delivered" -> it.status == StockRequestStatus.DELIVERED
                 "Rejected" -> it.status == StockRequestStatus.REJECTED
                 else -> true
             }
@@ -349,10 +222,12 @@ fun AdminStockRequestsScreen(
                             StockRequestStatus.REJECTED ->
                                 "Are you sure you want to reject all items in this stock request (${request.requestId})?"
                             StockRequestStatus.DISPATCHED ->
-                                "Are you sure you want to dispatch all items in this stock request (${request.requestId})?"
+                                "Enter shipping details for request ${request.requestId}:"
                             else -> ""
                         }
                     )
+
+
 
                     if (targetStatus == StockRequestStatus.REJECTED) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -360,7 +235,51 @@ fun AdminStockRequestsScreen(
                             value = rejectionReason,
                             onValueChange = { rejectionReason = it },
                             label = { Text("Reason (Optional)") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2
+                        )
+                    }
+
+                    if (targetStatus == StockRequestStatus.DISPATCHED) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Shipping To:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Dealer: ${request.dealerName}", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text("Address: ${request.dealerAddress ?: "No address provided"}", fontSize = 14.sp)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = courierName,
+                            onValueChange = { courierName = it },
+                            label = { Text("Courier Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = trackingId,
+                            onValueChange = { trackingId = it },
+                            label = { Text("Tracking ID") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = adminNote,
+                            onValueChange = { adminNote = it },
+                            label = { Text("Admin Note / Remarks (Optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2
                         )
                     }
                 }
@@ -370,18 +289,25 @@ fun AdminStockRequestsScreen(
                     onClick = {
                         when (targetStatus) {
                             StockRequestStatus.APPROVED -> {
-                                viewModel.approveRequest(request)
+                                viewModel.approveRequest(token, request, "")
                             }
                             StockRequestStatus.REJECTED -> {
-                                viewModel.rejectRequest(request, rejectionReason)
+                                viewModel.rejectRequest(token, request, rejectionReason)
                             }
                             StockRequestStatus.DISPATCHED -> {
-                                viewModel.dispatchRequest(request)
+                                if (courierName.isNotBlank() && trackingId.isNotBlank()) {
+                                    viewModel.dispatchRequest(token, request, courierName, trackingId, adminNote)
+                                } else {
+                                    return@Button
+                                }
                             }
                             else -> {}
                         }
                         showConfirmDialog = null
                         rejectionReason = ""
+                        courierName = ""
+                        trackingId = ""
+                        adminNote = ""
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = when (targetStatus) {
@@ -399,6 +325,8 @@ fun AdminStockRequestsScreen(
                 TextButton(onClick = {
                     showConfirmDialog = null
                     rejectionReason = ""
+                    courierName = ""
+                    trackingId = ""
                 }) {
                     Text("Cancel")
                 }
@@ -408,18 +336,24 @@ fun AdminStockRequestsScreen(
 }
 
 @Composable
-private fun FilterTab(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun FilterTabPremium(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    selectedColor: Color = Color.White,
+    unselectedColor: Color = Color.White.copy(alpha = 0.3f)
+) {
     Surface(
         onClick = onClick,
-        color = if (isSelected) Color(0xFF5C6BC0) else Color.Transparent,
-        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) selectedColor else unselectedColor,
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier.height(36.dp)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(
                 text = label,
-                color = if (isSelected) Color.White else Color.Gray,
-                fontSize = 14.sp,
+                color = if (isSelected) Color(0xFFD32F2F) else Color.White,
+                fontSize = 13.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
             )
         }
@@ -435,20 +369,37 @@ private fun StockRequestCard(
     onDetails: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDetails),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text(request.requestId, fontSize = 12.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
-                    Text(request.dealerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(request.location, fontSize = 12.sp, color = Color.Gray)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = Color(0xFFFEE2E2),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                request.dealerName.take(1).uppercase(),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB71C1C)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(request.dealerName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                        Text("ID: ${request.requestId}", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(request.location, fontSize = 12.sp, color = Color.Gray)
+                        }
                     }
                 }
                 StatusBadge(status = request.status)
@@ -456,70 +407,96 @@ private fun StockRequestCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = Color(0xFFF9FAFB),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text("ITEMS SUMMARY", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                    Text(request.kitType, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextBlack)
-                    Text(request.quantity, fontSize = 12.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("DATE", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-                    Text(request.requestDate, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                Row(
+                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("REQUESTED KITS", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        Text("${request.totalKits} Full Kits", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("1 Kit = 1 Brush + 1 Paste + 1 Flyer", fontSize = 11.sp, color = PrimaryBlue, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("DATE", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        Text(request.requestDate, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            val hasActions = request.status == StockRequestStatus.PENDING || request.status == StockRequestStatus.APPROVED
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (request.status == StockRequestStatus.PENDING) {
-                        Surface(
-                            onClick = onApprove,
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Check, contentDescription = "Approve All", tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+            if (hasActions) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (request.status == StockRequestStatus.PENDING) {
+                            Button(
+                                onClick = onApprove,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8F5E9), contentColor = Color(0xFF2E7D32)),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("APPROVE", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
-                        }
-                        Surface(
-                            onClick = onReject,
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Close, contentDescription = "Reject All", tint = Color.Red, modifier = Modifier.size(20.dp))
+                            Button(
+                                onClick = onReject,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE), contentColor = Color(0xFFD32F2F)),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("REJECT", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
-                        }
-                    } else if (request.status == StockRequestStatus.APPROVED) {
-                        Button(
-                            onClick = onDispatch,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
-                            modifier = Modifier.height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
-                        ) {
-                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("DISPATCH ALL", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        } else if (request.status == StockRequestStatus.APPROVED) {
+                            Button(
+                                onClick = onDispatch,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0F2F1), contentColor = Color(0xFF00695C)),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("DISPATCH", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
-                }
 
-                IconButton(onClick = onDetails) {
-                    Icon(Icons.Default.Visibility, contentDescription = "View Details", tint = Color.Gray)
+                    IconButton(onClick = onDetails) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "View Details", tint = Color.LightGray)
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "View Details",
+                        tint = Color.LightGray,
+                        modifier = Modifier
+                            .padding(top = 8.dp, bottom = 4.dp, end = 4.dp)
+                            .size(20.dp)
+                    )
                 }
             }
         }
@@ -532,6 +509,7 @@ private fun StatusBadge(status: StockRequestStatus) {
         StockRequestStatus.PENDING -> Triple(Color(0xFFE65100), Color(0xFFFFF3E0), "PENDING")
         StockRequestStatus.APPROVED -> Triple(Color(0xFF1976D2), Color(0xFFE3F2FD), "APPROVED")
         StockRequestStatus.DISPATCHED -> Triple(Color(0xFF7B1FA2), Color(0xFFF3E5F5), "DISPATCHED")
+        StockRequestStatus.DELIVERED -> Triple(Color(0xFF2E7D32), Color(0xFFE8F5E9), "DELIVERED")
         StockRequestStatus.REJECTED -> Triple(Color(0xFFD32F2F), Color(0xFFFFEBEE), "REJECTED")
     }
 
@@ -547,6 +525,7 @@ private fun StatusBadge(status: StockRequestStatus) {
                 StockRequestStatus.PENDING -> Icons.Default.History
                 StockRequestStatus.APPROVED -> Icons.Default.CheckCircle
                 StockRequestStatus.DISPATCHED -> Icons.Default.LocalShipping
+                StockRequestStatus.DELIVERED -> Icons.Default.Inventory
                 StockRequestStatus.REJECTED -> Icons.Default.Cancel
             }
             Icon(icon, null, modifier = Modifier.size(14.dp), tint = color)

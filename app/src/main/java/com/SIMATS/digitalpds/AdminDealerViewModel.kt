@@ -18,26 +18,61 @@ class AdminDealerViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    fun fetchDealers() {
+    fun fetchDealers(token: String) {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
             try {
-                val response = RetrofitClient.apiService.getDealers()
+                val response = RetrofitClient.apiService.getDealers("Bearer $token")
                 if (response.isSuccessful) {
                     val body = response.body() ?: emptyList()
-                    dealers = body.map {
-                        it.copy(
-                            handle = "@${it.name.lowercase().replace(" ", "")}",
-                            location = it.companyName,
-                            activeStatus = if (it.isEnabled) "Active" else "Inactive"
+                    dealers = body.map { networkDealer ->
+                        // Transform network model to UI model
+                        DealerInfo(
+                            id = networkDealer.id,
+                            name = networkDealer.name,
+                            email = networkDealer.email,
+                            phone = networkDealer.phone,
+                            companyName = networkDealer.companyName,
+                            address = networkDealer.address,
+                            city = networkDealer.city,
+                            state = networkDealer.state,
+                            username = networkDealer.username,
+                            handle = networkDealer.username ?: "@${networkDealer.name.lowercase().replace(" ", "")}",
+                            location = networkDealer.location,
+                            activeStatus = networkDealer.activeStatus ?: "Active",
+                            emailVerified = networkDealer.emailVerified
                         )
                     }
                 } else {
-                    errorMessage = "Error: ${response.code()}"
+                    errorMessage = when (response.code()) {
+                        401 -> "Session expired. Please login again."
+                        403 -> "You do not have permission to view this."
+                        else -> "Error: ${response.code()} ${response.message()}"
+                    }
                 }
+
+
             } catch (e: Exception) {
                 errorMessage = e.message
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+    fun deleteDealer(token: String, dealerId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val response = RetrofitClient.apiService.adminDeleteDealer("Bearer $token", dealerId)
+                if (response.isSuccessful) {
+                    dealers = dealers.filterNot { it.id == dealerId }
+                    onSuccess()
+                } else {
+                    onError("Failed to delete dealer: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onError("Error deleting dealer: ${e.message}")
             } finally {
                 isLoading = false
             }

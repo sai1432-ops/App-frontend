@@ -1,6 +1,5 @@
 package com.SIMATS.digitalpds
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
@@ -22,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,12 +38,6 @@ data class FamilyMemberLocal(
     val score: String = "--"
 )
 
-val dummyFamilyMembers = listOf(
-    FamilyMemberLocal(1, "Arjun Sharma", 32, "Self", "Low", "85"),
-    FamilyMemberLocal(2, "Priya Sharma", 28, "Spouse", "Low", "90"),
-    FamilyMemberLocal(3, "Rohan Sharma", 8, "Son", "Medium", "65")
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyMembersScreen(
@@ -54,11 +46,15 @@ fun FamilyMembersScreen(
     onAddMemberClick: () -> Unit = {},
     onEditMemberClick: (FamilyMemberResponse) -> Unit = {},
     onViewProfileClick: (FamilyMemberResponse) -> Unit = {},
+    onDeleteMemberClick: (FamilyMemberResponse) -> Unit = {},
     familyMembers: List<FamilyMemberResponse> = emptyList(),
     isLoading: Boolean = false,
     scrollState: LazyListState = rememberLazyListState(),
     onRefresh: () -> Unit = {}
 ) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var memberToDelete by remember { mutableStateOf<FamilyMemberResponse?>(null) }
+
     LaunchedEffect(userId) {
         if (userId > 0) {
             onRefresh()
@@ -69,17 +65,12 @@ fun FamilyMembersScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Family Members",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
+                    Text(
+                        "Family Members",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextBlack
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -152,12 +143,41 @@ fun FamilyMembersScreen(
                             ProfessionalFamilyMemberCard(
                                 member = member,
                                 onEditClick = { onEditMemberClick(member) },
-                                onViewProfileClick = { onViewProfileClick(member) }
+                                onViewProfileClick = { onViewProfileClick(member) },
+                                onDeleteClick = {
+                                    memberToDelete = member
+                                    showDeleteConfirm = true
+                                }
                             )
                         }
                     }
                 }
             }
+
+            if (showDeleteConfirm && memberToDelete != null) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirm = false },
+                    title = { Text("Delete Family Member") },
+                    text = { Text("Are you sure you want to delete ${memberToDelete?.memberName}?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                memberToDelete?.let { onDeleteMemberClick(it) }
+                                showDeleteConfirm = false
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                        ) {
+                            Text("Delete")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirm = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
 
             if (isLoading) {
                 CircularProgressIndicator(
@@ -173,7 +193,8 @@ fun FamilyMembersScreen(
 fun ProfessionalFamilyMemberCard(
     member: FamilyMemberResponse,
     onEditClick: () -> Unit,
-    onViewProfileClick: () -> Unit
+    onViewProfileClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -188,14 +209,9 @@ fun ProfessionalFamilyMemberCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.user),
-                    contentDescription = member.memberName,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE9EEF3)),
-                    contentScale = ContentScale.Crop
+                InitialsAvatar(
+                    name = member.memberName,
+                    modifier = Modifier.size(56.dp)
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -244,6 +260,22 @@ fun ProfessionalFamilyMemberCard(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.Red.copy(alpha = 0.1f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -262,19 +294,6 @@ fun ProfessionalFamilyMemberCard(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.Gray
-                    )
-                }
-
-                Surface(
-                    color = PrimaryBlue.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Weekly Count: ${member.weeklyBrushCount}",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryBlue
                     )
                 }
             }
@@ -301,14 +320,9 @@ fun ProfessionalFamilyMemberCardLocal(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.user),
-                    contentDescription = member.name,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE9EEF3)),
-                    contentScale = ContentScale.Crop
+                InitialsAvatar(
+                    name = member.name,
+                    modifier = Modifier.size(56.dp)
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))

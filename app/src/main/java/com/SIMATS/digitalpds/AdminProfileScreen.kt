@@ -11,13 +11,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,123 +47,129 @@ fun AdminProfileScreen(
     adminEmail: String = "admin@digitalpds.gov.in",
     adminPhone: String = "+91 98765 43210",
     adminId: Int = 0,
-    adminProfileBitmap: Bitmap? = null
+    adminLocation: String = "Central Headquarters"
 ) {
+    val primaryRed = Color(0xFFD32F2F)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Admin Profile", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        },
         bottomBar = {
             AdminBottomNavigationBar(currentScreen = "Profile", onNavigate = onNavigate)
         },
         containerColor = Color(0xFFF8FBFF)
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // Profile Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Premium Gradient Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(primaryRed, primaryRed.copy(alpha = 0.85f), primaryRed.copy(alpha = 0.6f))
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
+                TopAppBar(
+                    title = { Text("Admin Profile", fontWeight = FontWeight.Bold, color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    if (adminProfileBitmap != null) {
-                        Image(
-                            bitmap = adminProfileBitmap.asImageBitmap(),
-                            contentDescription = "Admin Profile",
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF1F4F4)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.gov),
-                            contentDescription = "Admin Profile",
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF1F4F4)),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(adminName, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-                    Surface(
-                        color = Color(0xFFE3F2FD),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.padding(top = 8.dp)
+
+                    // Profile Card Overlapping
+                    Card(
+                        modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0x26000000)),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
                     ) {
-                        Text(
-                            "ADMIN",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryBlue
-                        )
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFEBEE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = adminName.firstOrNull()?.toString()?.uppercase() ?: "A",
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = primaryRed
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(adminName, fontSize = 24.sp, fontWeight = FontWeight.Black, color = TextBlack)
+                            Surface(
+                                color = Color(0xFFFFEBEE),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text(
+                                    "ADMIN",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = primaryRed
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(adminEmail, fontSize = 14.sp, color = TextGray)
+                            Text(adminPhone, fontSize = 14.sp, color = TextGray)
+                            Text("ID: AD-${if (adminId > 0) adminId else "7721"}", fontSize = 12.sp, color = Color.LightGray, modifier = Modifier.padding(top = 4.dp))
+                        }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(adminEmail, fontSize = 14.sp, color = TextGray)
-                    Text(adminPhone, fontSize = 14.sp, color = TextGray)
-                    Text("ID: AD-${if (adminId > 0) adminId else "7721"}", fontSize = 12.sp, color = Color.LightGray, modifier = Modifier.padding(top = 4.dp))
+
+                    // Account Details Section
+                    ProfileSection(title = "Account Details") {
+                        ProfileInfoRow(label = "Full Name", value = adminName)
+                        ProfileInfoRow(label = "Email Address", value = adminEmail)
+                        ProfileInfoRow(label = "Phone Number", value = adminPhone)
+                        ProfileInfoRow(label = "Region", value = adminLocation)
+                    }
+
+                    // Support Section
+                    ProfileSection(title = "Support & Privacy") {
+                        ProfileMenuRow(icon = Icons.Default.PrivacyTip, label = "Privacy Policy", iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2), onClick = onPrivacyPolicyClick)
+                        ProfileMenuRow(icon = Icons.Default.Description, label = "Terms & Conditions", iconBg = Color(0xFFE0F7FA), iconTint = Color(0xFF00838F), onClick = onTermsConditionsClick)
+                    }
+
+                    // Logout Button
+                    Button(
+                        onClick = onLogoutClick,
+                        modifier = Modifier.fillMaxWidth().height(56.dp).shadow(2.dp, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryRed, contentColor = Color.White)
+                    ) {
+                        Icon(Icons.Default.Logout, contentDescription = null)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Logout Session", fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
-
-            // Account Details Section
-            ProfileSection(title = "Account Details") {
-                ProfileInfoRow(label = "Full Name", value = adminName)
-                ProfileInfoRow(label = "Email Address", value = adminEmail)
-                ProfileInfoRow(label = "Phone Number", value = adminPhone)
-                ProfileInfoRow(label = "Region", value = "Central Headquarters")
-            }
-
-            // App Settings Section
-            ProfileSection(title = "App Settings") {
-                ProfileMenuRow(icon = Icons.Default.Edit, label = "Edit Profile", onClick = onEditProfileClick)
-                ProfileMenuRow(icon = Icons.Default.Lock, label = "Change Password", onClick = onChangePasswordClick)
-                ProfileToggleRow(icon = Icons.Default.Notifications, label = "Notifications", isChecked = notificationsEnabled, onCheckedChange = onNotificationsToggle)
-            }
-
-            // Support Section
-            ProfileSection(title = "Support & Privacy") {
-                ProfileMenuRow(icon = Icons.Default.PrivacyTip, label = "Privacy Policy", onClick = onPrivacyPolicyClick)
-                ProfileMenuRow(icon = Icons.Default.Description, label = "Terms & Conditions", onClick = onTermsConditionsClick)
-                ProfileMenuRow(icon = Icons.Default.HelpCenter, label = "Help & Support", onClick = onHelpSupportClick)
-            }
-
-            // Logout Button
-            Button(
-                onClick = onLogoutClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE), contentColor = Color(0xFFD32F2F))
-            ) {
-                Icon(Icons.Default.Logout, contentDescription = null)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Logout Session", fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -172,16 +179,15 @@ private fun ProfileSection(title: String, content: @Composable ColumnScope.() ->
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,
-            fontSize = 16.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = TextBlack,
             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
         )
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            modifier = Modifier.fillMaxWidth().shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x1A000000)),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 content()
@@ -192,63 +198,70 @@ private fun ProfileSection(title: String, content: @Composable ColumnScope.() ->
 
 @Composable
 private fun ProfileInfoRow(label: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
         Text(label, fontSize = 12.sp, color = TextGray)
-        Text(value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = TextBlack)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextBlack)
     }
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF5F7F9))
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFF3F4F6), thickness = 1.dp)
 }
 
 @Composable
-private fun ProfileMenuRow(icon: ImageVector, label: String, value: String? = null, onClick: () -> Unit) {
+private fun ProfileMenuRow(icon: ImageVector, label: String, value: String? = null, iconBg: Color, iconTint: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF1F4F4)),
-            contentAlignment = Alignment.Center
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            color = iconBg
         ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = PrimaryBlue)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = iconTint)
+            }
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = TextBlack, modifier = Modifier.weight(1f))
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextBlack, modifier = Modifier.weight(1f))
         if (value != null) {
             Text(value, fontSize = 14.sp, color = TextGray, modifier = Modifier.padding(end = 8.dp))
         }
-        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
+        Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.LightGray)
     }
 }
 
 @Composable
-private fun ProfileToggleRow(icon: ImageVector, label: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun ProfileToggleRow(icon: ImageVector, label: String, iconBg: Color, iconTint: Color, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF1F4F4)),
-            contentAlignment = Alignment.Center
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            color = iconBg
         ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = PrimaryBlue)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = iconTint)
+            }
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = TextBlack, modifier = Modifier.weight(1f))
+        Text(label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextBlack, modifier = Modifier.weight(1f))
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PrimaryBlue)
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White, 
+                checkedTrackColor = Color(0xFFD32F2F),
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = Color.LightGray,
+                uncheckedBorderColor = Color.Transparent
+            )
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.SIMATS.digitalpds
 
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,7 +30,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserLoginScreen(
-    onLoginSuccess: (userId: Int, name: String, email: String, phone: String, pdsVerified: Boolean) -> Unit,
+    onLoginSuccess: (userId: Int, name: String, email: String, phone: String, pdsVerified: Boolean, token: String?, profileImage: String?) -> Unit,
     onBackClick: () -> Unit,
     onForgotPasswordClick: () -> Unit = {},
     onSignUpClick: () -> Unit = {}
@@ -114,7 +115,7 @@ fun UserLoginScreen(
                             email = it
                             emailError = null
                         },
-                        label = { Text("Email") },
+                        label = { Text("Email or Mobile Number") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -166,12 +167,26 @@ fun UserLoginScreen(
                     Button(
                         onClick = {
                             var hasError = false
-                            if (email.isBlank()) {
-                                emailError = "Email is required"
+                            val loginIdentity = email.trim()
+                            
+                            if (loginIdentity.isBlank()) {
+                                emailError = "Email or Mobile Number is required"
                                 hasError = true
+                            } else {
+                                val isEmail = Patterns.EMAIL_ADDRESS.matcher(loginIdentity).matches()
+                                val isPhone = loginIdentity.length == 10 && loginIdentity.all { it.isDigit() }
+                                
+                                if (!isEmail && !isPhone) {
+                                    emailError = "Enter a valid email or 10-digit mobile number"
+                                    hasError = true
+                                }
                             }
+                            
                             if (password.isBlank()) {
                                 passwordError = "Password is required"
+                                hasError = true
+                            } else if (password.length < 8) {
+                                passwordError = "Password must be at least 8 characters"
                                 hasError = true
                             }
 
@@ -189,7 +204,9 @@ fun UserLoginScreen(
                                                     body.name ?: "User",
                                                     body.email ?: email,
                                                     body.phone ?: "",
-                                                    body.pdsVerified ?: false
+                                                    body.pdsVerified ?: false,
+                                                    body.token,
+                                                    body.profileImage
                                                 )
                                             }
                                         } else {

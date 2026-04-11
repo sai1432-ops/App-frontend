@@ -1,372 +1,193 @@
 package com.SIMATS.digitalpds
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import com.SIMATS.digitalpds.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewHouseholdRegistrationScreen(
     onBackClick: () -> Unit,
-    onConfirmRegistration: (String, String) -> Unit
+    onConfirmRegistration: (String, String?, String, String, String, String, String, String, String, List<com.SIMATS.digitalpds.network.FamilyMemberInput>, Uri?, Uri?) -> Unit,
+    isLoading: Boolean = false
 ) {
-    var fullName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("Male") }
-    var education by remember { mutableStateOf("") }
-    var employment by remember { mutableStateOf("") }
-    var rationCard by remember { mutableStateOf("") }
-    var aadhaar by remember { mutableStateOf("") }
-    var streetAddress by remember { mutableStateOf("") }
+    val addedMembers = remember { mutableStateListOf<com.SIMATS.digitalpds.network.FamilyMemberInput>() }
+    var pdsFrontUri by remember { mutableStateOf<Uri?>(null) }
+    var pdsBackUri by remember { mutableStateOf<Uri?>(null) }
 
-    var familyMemberName by remember { mutableStateOf("") }
-    var familyMemberAge by remember { mutableStateOf("") }
-    var familyMemberGender by remember { mutableStateOf("Male") }
+    val frontLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        pdsFrontUri = uri
+    }
+    val backLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        pdsBackUri = uri
+    }
 
-    val addedMembers = remember { mutableStateListOf<String>() }
-
-    var fullNameError by remember { mutableStateOf<String?>(null) }
-    var phoneError by remember { mutableStateOf<String?>(null) }
-    var ageError by remember { mutableStateOf<String?>(null) }
-    var rationCardError by remember { mutableStateOf<String?>(null) }
-    var aadhaarError by remember { mutableStateOf<String?>(null) }
-    var addressError by remember { mutableStateOf<String?>(null) }
-
-    var familyMemberNameError by remember { mutableStateOf<String?>(null) }
-    var familyMemberAgeError by remember { mutableStateOf<String?>(null) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "New Household Registration",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        },
-        containerColor = Color(0xFFF7FBFB)
-    ) { paddingValues ->
-        Column(
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundWhite)) {
+        // Top Gradient Background
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
-        ) {
-            Text(
-                "DEALER ADMINISTRATIVE TOOL",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Gray,
-                letterSpacing = 1.sp
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                "1. PRIMARY BENEFICIARY",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RegistrationTextField(
-                label = "Full Name",
-                value = fullName,
-                onValueChange = {
-                    fullName = it
-                    fullNameError = null
-                },
-                error = fullNameError
-            )
-
-            RegistrationTextField(
-                label = "Phone Number (10-digit)",
-                value = phone,
-                keyboardType = KeyboardType.Phone,
-                onValueChange = {
-                    phone = it.filter { ch -> ch.isDigit() }.take(10)
-                    phoneError = null
-                },
-                error = phoneError
-            )
-
-            RegistrationTextField(
-                label = "Age",
-                value = age,
-                keyboardType = KeyboardType.Number,
-                onValueChange = {
-                    age = it.filter { ch -> ch.isDigit() }.take(3)
-                    ageError = null
-                },
-                error = ageError
-            )
-
-            GenderSelection(gender) { gender = it }
-
-            RegistrationDropdown(
-                label = "Educational Level",
-                selectedValue = education,
-                onValueSelected = { education = it }
-            )
-
-            RegistrationDropdown(
-                label = "Employment Status",
-                selectedValue = employment,
-                onValueSelected = { employment = it }
-            )
-
-            RegistrationTextField(
-                label = "Ration Card No",
-                value = rationCard,
-                onValueChange = {
-                    rationCard = it.uppercase()
-                    rationCardError = null
-                },
-                error = rationCardError
-            )
-
-            RegistrationTextField(
-                label = "Aadhaar Card No (12-digit)",
-                value = aadhaar,
-                keyboardType = KeyboardType.Number,
-                onValueChange = {
-                    aadhaar = it.filter { ch -> ch.isDigit() }.take(12)
-                    aadhaarError = null
-                },
-                error = aadhaarError
-            )
-
-            RegistrationTextField(
-                label = "Street Address",
-                value = streetAddress,
-                onValueChange = {
-                    streetAddress = it
-                    addressError = null
-                },
-                error = addressError
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {
-                    var isValid = true
-
-                    if (fullName.isBlank()) {
-                        fullNameError = "Full name is required"
-                        isValid = false
-                    }
-
-                    if (phone.length != 10) {
-                        phoneError = "Enter valid 10-digit phone number"
-                        isValid = false
-                    }
-
-                    if (age.isBlank()) {
-                        ageError = "Age is required"
-                        isValid = false
-                    }
-
-                    if (rationCard.isBlank()) {
-                        rationCardError = "Ration card number is required"
-                        isValid = false
-                    }
-
-                    if (aadhaar.isNotBlank() && aadhaar.length != 12) {
-                        aadhaarError = "Aadhaar must be 12 digits"
-                        isValid = false
-                    }
-
-                    if (streetAddress.isBlank()) {
-                        addressError = "Street address is required"
-                        isValid = false
-                    }
-
-                    if (isValid) {
-                        onConfirmRegistration(fullName, rationCard)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-            ) {
-                Text(
-                    "CONFIRM & REGISTER HOUSEHOLD",
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Text(
-                "2. HOUSEHOLD COMPOSITION",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RegistrationTextField(
-                label = "NUMBER OF FAMILY MEMBERS",
-                value = addedMembers.size.toString(),
-                keyboardType = KeyboardType.Number,
-                onValueChange = {},
-                enabled = false
-            )
-
-            Text(
-                "Please include all family members residing at the same address.",
-                fontSize = 12.sp,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                "ADD FAMILY MEMBER",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            RegistrationTextField(
-                label = "Name",
-                value = familyMemberName,
-                onValueChange = {
-                    familyMemberName = it
-                    familyMemberNameError = null
-                },
-                error = familyMemberNameError
-            )
-
-            RegistrationTextField(
-                label = "Age",
-                value = familyMemberAge,
-                keyboardType = KeyboardType.Number,
-                onValueChange = {
-                    familyMemberAge = it.filter { ch -> ch.isDigit() }.take(3)
-                    familyMemberAgeError = null
-                },
-                error = familyMemberAgeError
-            )
-
-            GenderSelection(familyMemberGender) { familyMemberGender = it }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .border(
-                        width = 1.dp,
-                        color = Color.LightGray,
-                        shape = RoundedCornerShape(8.dp)
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(DealerGreen, BackgroundWhite)
                     )
-                    .clickable {
-                        var isMemberValid = true
+                )
+        )
 
-                        if (familyMemberName.isBlank()) {
-                            familyMemberNameError = "Member name is required"
-                            isMemberValid = false
-                        }
-
-                        if (familyMemberAge.isBlank()) {
-                            familyMemberAgeError = "Member age is required"
-                            isMemberValid = false
-                        }
-
-                        if (isMemberValid) {
-                            addedMembers.add(
-                                "$familyMemberName, Age: $familyMemberAge • $familyMemberGender"
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Add Beneficiary",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            color = Color.White
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
                             )
-                            familyMemberName = ""
-                            familyMemberAge = ""
-                            familyMemberGender = "Male"
                         }
                     },
-                contentAlignment = Alignment.Center
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
             ) {
-                Text(
-                    "+ ADD TO LIST",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (addedMembers.isEmpty()) {
-                Text(
-                    "No family members added yet",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-            } else {
-                addedMembers.forEachIndexed { index, member ->
-                    Row(
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(24.dp)
                     ) {
                         Text(
-                            member,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f)
+                            "REGISTRATION FORM",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = DealerGreen,
+                            letterSpacing = 2.sp
+                        )
+                        
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp).width(40.dp),
+                            thickness = 3.dp,
+                            color = DealerGreen.copy(alpha = 0.3f)
                         )
 
-                        IconButton(onClick = { addedMembers.removeAt(index) }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Remove",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        BeneficiaryForm(
+                            isLoading = isLoading,
+                            submitButtonText = "CONFIRM & REGISTER HOUSEHOLD",
+                            buttonColor = DealerGreen,
+                            contentBeforeSubmit = {
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    text = "PDS Card Images",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DealerGreen
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ImagePickerSection("Front Side", pdsFrontUri) { frontLauncher.launch("image/*") }
+                                    }
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ImagePickerSection("Back Side", pdsBackUri) { backLauncher.launch("image/*") }
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(32.dp))
+                                HouseholdCompositionForm(addedMembers = addedMembers)
+                            },
+                            onSubmit = { name, email, phone, age, gender, education, employment, address, pdsCard ->
+                                onConfirmRegistration(name, email, phone, age, gender, education, employment, address, pdsCard, addedMembers.toList(), pdsFrontUri, pdsBackUri)
+                            }
+                        )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImagePickerSection(
+    label: String,
+    selectedUri: Uri?,
+    onPickImage: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onPickImage,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (selectedUri != null) "Change" else "Upload", fontSize = 14.sp)
+        }
+        if (selectedUri != null) {
+            Text(
+                "Selected",
+                fontSize = 11.sp,
+                color = Color(0xFF4CAF50),
+                modifier = Modifier.padding(top = 4.dp),
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -375,41 +196,53 @@ fun NewHouseholdRegistrationScreen(
 fun RegistrationTextField(
     label: String,
     value: String,
+    placeholder: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
     onValueChange: (String) -> Unit,
     error: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 10.dp)
     ) {
-        TextField(
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextBlack,
+            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        )
+        
+        OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(label, fontSize = 14.sp) },
+            placeholder = { Text(placeholder, color = TextGray.copy(alpha = 0.5f), fontSize = 14.sp) },
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = visualTransformation,
             isError = error != null,
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color(0xFFE9F1F1),
-                focusedContainerColor = Color(0xFFE9F1F1),
-                disabledContainerColor = Color(0xFFE9F1F1),
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = DealerGreen,
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedContainerColor = Color(0xFFF9F9F9),
+                unfocusedContainerColor = Color(0xFFF9F9F9),
+                errorBorderColor = Color.Red
             ),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(14.dp)
         )
 
         if (error != null) {
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = error,
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -429,59 +262,87 @@ fun RegistrationDropdown(
             "Primary",
             "Secondary",
             "Intermediate",
-            "Graduate"
+            "Graduate",
+            "Post Graduate"
         )
         "Employment Status" -> listOf(
             "Unemployed",
+            "Student",
             "Daily Wage",
             "Private Job",
             "Government Job",
-            "Self Employed"
+            "Self Employed",
+            "Retired"
         )
         else -> emptyList()
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 10.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(Color(0xFFE9F1F1), RoundedCornerShape(8.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (selectedValue.isBlank()) label else selectedValue,
-                    color = if (selectedValue.isBlank()) Color.Gray else Color.Black,
-                    fontSize = 14.sp
-                )
-                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-            }
-        }
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextBlack,
+            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        )
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(0.9f)
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onValueSelected(option)
-                        expanded = false
-                    }
-                )
+        Box {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(Color(0xFFF9F9F9), RoundedCornerShape(14.dp))
+                    .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(14.dp))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedValue.isBlank()) "Select $label" else selectedValue,
+                        color = if (selectedValue.isBlank()) TextGray.copy(alpha = 0.5f) else TextBlack,
+                        fontSize = 14.sp
+                    )
+                    Icon(
+                        Icons.Default.KeyboardArrowDown, 
+                        contentDescription = null,
+                        tint = DealerGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .background(Color.White, RoundedCornerShape(12.dp))
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { 
+                            Text(
+                                option, 
+                                fontSize = 14.sp,
+                                fontWeight = if (selectedValue == option) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedValue == option) DealerGreen else TextBlack
+                            ) 
+                        },
+                        onClick = {
+                            onValueSelected(option)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
@@ -490,27 +351,28 @@ fun RegistrationDropdown(
 @Composable
 fun GenderSelection(selected: String, onSelected: (String) -> Unit) {
     Row(
-        modifier = Modifier.padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         listOf("Male", "Female", "Other").forEach { option ->
-            Box(
+            val isSelected = selected == option
+            Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(40.dp)
-                    .background(
-                        if (selected == option) Color.LightGray.copy(alpha = 0.3f)
-                        else Color(0xFFE9F1F1),
-                        RoundedCornerShape(4.dp)
-                    )
+                    .height(44.dp)
                     .clickable { onSelected(option) },
-                contentAlignment = Alignment.Center
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) DealerGreen else Color(0xFFF9F9F9),
+                border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE0E0E0))
             ) {
-                Text(
-                    option,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        option,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Color.White else TextGray
+                    )
+                }
             }
         }
     }
@@ -522,7 +384,7 @@ fun NewHouseholdRegistrationScreenPreview() {
     DigitalpdsTheme {
         NewHouseholdRegistrationScreen(
             onBackClick = {},
-            onConfirmRegistration = { _, _ -> }
+            onConfirmRegistration = { _, _, _, _, _, _, _, _, _, _, _, _ -> }
         )
     }
 }

@@ -1,6 +1,10 @@
 package com.SIMATS.digitalpds
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -26,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,18 +50,56 @@ import java.util.concurrent.Executors
 fun QRScannerScreen(
     onCloseClick: () -> Unit,
     onResult: (String) -> Unit,
-    themeColor: Color = PrimaryBlue
+    themeColor: Color = PrimaryBlue,
+    scanModeLabel: String = "Scan QR Code"
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val isInspectionMode = LocalInspectionMode.current
+    
+    // State to track camera permission
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // Permission launcher
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasCameraPermission = granted
+        }
+    )
+
+    // Request permission if not granted
+    LaunchedEffect(key1 = true) {
+        if (!hasCameraPermission && !isInspectionMode) {
+            launcher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Skip executor initialization in Preview mode to avoid CameraX issues
+    val cameraExecutor = remember { 
+        if (isInspectionMode) null else Executors.newSingleThreadExecutor() 
+    }
 
     var hasCaptured by remember { mutableStateOf(false) }
 
-    val options = BarcodeScannerOptions.Builder()
-        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-        .build()
-    val scanner = BarcodeScanning.getClient(options)
+    // Initialize the barcode scanner, but skip in Preview mode to avoid MlKitContext issues
+    val scanner = remember {
+        if (isInspectionMode) {
+            null
+        } else {
+            val options = BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE, Barcode.FORMAT_ALL_FORMATS)
+                .build()
+            BarcodeScanning.getClient(options)
+        }
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "scanning")
     val offsetY by infiniteTransition.animateFloat(
@@ -71,8 +114,8 @@ fun QRScannerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            cameraExecutor.shutdown()
-            scanner.close()
+            cameraExecutor?.shutdown()
+            scanner?.close()
         }
     }
 
@@ -81,65 +124,100 @@ fun QRScannerScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        AndroidView(
-            factory = { ctx ->
-                val previewView = PreviewView(ctx)
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+        // Only attempt to initialize CameraX if not in Preview mode and permission is granted
+        if (!isInspectionMode && cameraExecutor != null && hasCameraPermission) {
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx)
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
 
-                    val preview = CameraPreview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
+                        val preview = CameraPreview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
+                        }
 
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
+                        val imageAnalysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
 
-                    imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null && !hasCaptured) {
-                            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                            scanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    if (barcodes.isNotEmpty() && !hasCaptured) {
-                                        val barcodeValue = barcodes[0].rawValue
-                                        if (barcodeValue != null) {
-                                            hasCaptured = true
-                                            onResult(barcodeValue)
+                        imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                            val mediaImage = imageProxy.image
+                            if (mediaImage != null && !hasCaptured && scanner != null) {
+                                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                                scanner.process(image)
+                                    .addOnSuccessListener { barcodes ->
+                                        if (barcodes.isNotEmpty() && !hasCaptured) {
+                                            val barcodeValue = barcodes[0].rawValue
+                                            if (barcodeValue != null) {
+                                                hasCaptured = true
+                                                onResult(barcodeValue)
+                                            }
                                         }
                                     }
-                                }
-                                .addOnFailureListener {
-                                    Log.e("QRScanner", "Scanning failed", it)
-                                }
-                                .addOnCompleteListener {
-                                    imageProxy.close()
-                                }
-                        } else {
-                            imageProxy.close()
+                                    .addOnFailureListener {
+                                        Log.e("QRScanner", "Scanning failed", it)
+                                    }
+                                    .addOnCompleteListener {
+                                        imageProxy.close()
+                                    }
+                            } else {
+                                imageProxy.close()
+                            }
+                        }
+
+                        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                        try {
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                cameraSelector,
+                                preview,
+                                imageAnalysis
+                            )
+                        } catch (exc: Exception) {
+                            Log.e("QRScanner", "Use case binding failed", exc)
+                        }
+                    }, ContextCompat.getMainExecutor(ctx))
+                    previewView
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // Show a placeholder if in Preview mode or permission not granted
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.DarkGray.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        modifier = Modifier.size(100.dp),
+                        tint = Color.White.copy(alpha = 0.2f)
+                    )
+                    if (!hasCameraPermission && !isInspectionMode) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Camera permission required",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 16.sp
+                        )
+                        Button(
+                            onClick = { launcher.launch(Manifest.permission.CAMERA) },
+                            colors = ButtonDefaults.buttonColors(containerColor = themeColor),
+                            modifier = Modifier.padding(top = 16.dp)
+                        ) {
+                            Text("Grant Permission")
                         }
                     }
-
-                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                    try {
-                        cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            cameraSelector,
-                            preview,
-                            imageAnalysis
-                        )
-                    } catch (exc: Exception) {
-                        Log.e("QRScanner", "Use case binding failed", exc)
-                    }
-                }, ContextCompat.getMainExecutor(ctx))
-                previewView
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                }
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -184,7 +262,7 @@ fun QRScannerScreen(
             }
 
             Text(
-                "Scan Dealer QR",
+                text = scanModeLabel,
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -208,7 +286,7 @@ fun QRScannerScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Align QR code within the frame",
+                text = "Align the code within the frame",
                 color = Color.White.copy(alpha = 0.8f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium

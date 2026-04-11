@@ -1,5 +1,6 @@
 package com.SIMATS.digitalpds
 
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -50,6 +51,15 @@ fun AdminCreateAccountScreen(
 
     // Admin Red Theme
     val primaryRed = Color(0xFFD32F2F)
+
+    fun isValidEmail(email: String): Boolean {
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
+    fun isValidPassword(password: String): Boolean {
+        val passwordPattern = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$"
+        return password.matches(passwordPattern.toRegex())
+    }
 
     Scaffold(
         topBar = {
@@ -167,12 +177,24 @@ fun AdminCreateAccountScreen(
 
             Button(
                 onClick = {
-                    if (password != confirmPassword) {
-                        Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
                     if (name.isBlank() || email.isBlank() || phoneNumber.isBlank() || password.isBlank()) {
                         Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (!isValidEmail(email)) {
+                        Toast.makeText(context, "Please enter a valid email address", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (!isValidPassword(password)) {
+                        Toast.makeText(
+                            context,
+                            "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@Button
+                    }
+                    if (password != confirmPassword) {
+                        Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 

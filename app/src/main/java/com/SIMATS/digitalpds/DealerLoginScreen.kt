@@ -1,5 +1,6 @@
 package com.SIMATS.digitalpds
 
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,18 +19,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.SIMATS.digitalpds.network.LoginRequest
-import com.SIMATS.digitalpds.network.RetrofitClient
-import com.SIMATS.digitalpds.ui.theme.TextGray
+import androidx.compose.ui.tooling.preview.Preview
+import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.network.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DealerLoginScreen(
-    onLoginClick: (Int, String, String, String) -> Unit,
+    onLoginClick: (Int, String, String, String, String?, String?, String?) -> Unit,
     onBackClick: () -> Unit,
     onForgotPasswordClick: () -> Unit = {}
 ) {
@@ -53,7 +55,7 @@ fun DealerLoginScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color.White, lightGreenBg)
+                    colors = listOf(DealerGreen, Color.White)
                 )
             )
     ) {
@@ -67,15 +69,15 @@ fun DealerLoginScreen(
 
             Surface(
                 modifier = Modifier.size(80.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = primaryGreen.copy(alpha = 0.1f)
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White.copy(alpha = 0.2f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Business,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
-                        tint = primaryGreen
+                        tint = Color.White
                     )
                 }
             }
@@ -86,22 +88,23 @@ fun DealerLoginScreen(
                 text = "Dealer Login",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = primaryGreen
+                color = Color.White
             )
             Text(
                 text = "Access your dealer dashboard",
                 fontSize = 15.sp,
-                color = TextGray,
+                color = Color.White.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(48.dp))
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(12.dp, RoundedCornerShape(28.dp), spotColor = Color(0x20000000)),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -124,9 +127,9 @@ fun DealerLoginScreen(
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = primaryGreen,
-                            unfocusedBorderColor = accentGreen.copy(alpha = 0.3f),
-                            focusedLabelColor = primaryGreen
+                            focusedBorderColor = DealerGreen,
+                            unfocusedBorderColor = DealerGreen.copy(alpha = 0.3f),
+                            focusedLabelColor = DealerGreen
                         )
                     )
 
@@ -150,15 +153,15 @@ fun DealerLoginScreen(
                         trailingIcon = {
                             val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = null, tint = accentGreen)
+                                Icon(imageVector = image, contentDescription = null, tint = DealerGreen)
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = primaryGreen,
-                            unfocusedBorderColor = accentGreen.copy(alpha = 0.3f),
-                            focusedLabelColor = primaryGreen
+                            focusedBorderColor = DealerGreen,
+                            unfocusedBorderColor = DealerGreen.copy(alpha = 0.3f),
+                            focusedLabelColor = DealerGreen
                         )
                     )
 
@@ -166,7 +169,7 @@ fun DealerLoginScreen(
 
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         TextButton(onClick = onForgotPasswordClick) {
-                            Text("Forgot Password?", color = primaryGreen, fontWeight = FontWeight.SemiBold)
+                            Text("Forgot Password?", color = DealerGreen, fontWeight = FontWeight.SemiBold)
                         }
                     }
 
@@ -179,10 +182,16 @@ fun DealerLoginScreen(
                             if (email.isBlank()) {
                                 emailError = "Email is required"
                                 hasError = true
+                            } else if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+                                emailError = "Enter a valid email address"
+                                hasError = true
                             }
 
                             if (password.isBlank()) {
                                 passwordError = "Password is required"
+                                hasError = true
+                            } else if (password.length < 8) {
+                                passwordError = "Password must be at least 8 characters"
                                 hasError = true
                             }
 
@@ -201,6 +210,9 @@ fun DealerLoginScreen(
                                             val name = body.name ?: "Dealer"
                                             val respEmail = body.email ?: email
                                             val phone = body.phone ?: ""
+                                            val token = body.token
+                                            val profileImage = body.profileImage
+                                            val qrValue = body.dealerQrValue
 
                                             if (dealerId != null && dealerId > 0) {
                                                 Toast.makeText(
@@ -208,7 +220,7 @@ fun DealerLoginScreen(
                                                     body.message ?: "Dealer Login Successful",
                                                     Toast.LENGTH_SHORT
                                                 ).show()
-                                                onLoginClick(dealerId, name, respEmail, phone)
+                                                onLoginClick(dealerId, name, respEmail, phone, token, profileImage, qrValue)
                                             } else {
                                                 Toast.makeText(
                                                     context,
@@ -240,8 +252,8 @@ fun DealerLoginScreen(
                             .fillMaxWidth()
                             .height(56.dp),
                         enabled = !isLoading,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DealerGreen)
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
@@ -265,9 +277,9 @@ fun DealerLoginScreen(
             TextButton(onClick = onBackClick) {
                 Text(
                     "Back to Role Selection",
-                    color = primaryGreen,
+                    color = DealerGreen,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Bold
                 )
             }
 

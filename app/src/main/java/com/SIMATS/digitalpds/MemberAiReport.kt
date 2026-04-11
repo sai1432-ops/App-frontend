@@ -4,9 +4,8 @@ import com.SIMATS.digitalpds.network.AiPredictionResponse
 
 data class MemberAiReport(
     val memberId: Int,
-    val imageUri: String?,
-    val analysisResult: AiPredictionResponse,
-    val scanDate: String,
-    val oralHealthScore: Int,
+    val imagePath: String?,
+    val aiResult: AiPredictionResponse,
+    val createdAt: String,
     val riskLevel: String
 )

@@ -1,6 +1,5 @@
 package com.SIMATS.digitalpds
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,74 +11,56 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import com.SIMATS.digitalpds.UserBottomNavigationBar
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.SIMATS.digitalpds.network.FamilyMemberResponse
+import com.SIMATS.digitalpds.network.KitReceivedSummary
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.ui.theme.textGraySub
+import androidx.compose.ui.draw.shadow
 
-data class KitHistoryRecord(
-    val title: String,
-    val date: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyKitHubScreen(
+    userId: Int = 0,
     familyMembers: List<FamilyMemberResponse> = emptyList(),
-    historyRecords: List<KitHistoryRecord> = emptyList(),
+    isLoading: Boolean = false,
     onBackClick: () -> Unit,
     onHomeClick: () -> Unit,
     onLogUsageClick: () -> Unit = {},
     onConfirmKitClick: () -> Unit = {},
     onLearnClick: () -> Unit = {},
     onConsultClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    viewModel: FamilyHealthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val distributionHistory by viewModel.distributionHistory.collectAsState()
+    val isLoadingHistory by viewModel.isLoadingHistory.collectAsState()
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (userId > 0) {
+            viewModel.fetchDistributionHistory("Bearer ${SessionManager(context).getAccessToken() ?: ""}", userId)
+        }
+    }
+
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Family Kit Hub",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
         bottomBar = {
             UserBottomNavigationBar(
                 currentScreen = "Kits",
@@ -90,7 +71,7 @@ fun FamilyKitHubScreen(
                 onProfileClick = onProfileClick
             )
         },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -98,161 +79,297 @@ fun FamilyKitHubScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                "Family Eligibility",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (familyMembers.isEmpty()) {
-                Text(
-                    "No family members registered.",
-                    fontSize = 14.sp,
-                    color = TextGray,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-            } else {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            // Gradient Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
                 ) {
-                    items(familyMembers) { member ->
-                        EligibilityMemberItem(
-                            name = member.memberName,
-                            status = "Eligible",
-                            imageRes = R.drawable.user
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Family Kit Hub",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Manage your monthly dental kits and track your family's usage.",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                Button(
-                    onClick = onLogUsageClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryBlue,
-                        contentColor = Color.White
-                    )
+                // Status Banner
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFE8F5E9))
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Log Monthly Usage", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onConfirmKitClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryBlue,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Confirm Kit Receipt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text("Active Enrollment", fontWeight = FontWeight.Bold, color = Color(0xFF1B5E20), fontSize = 15.sp)
+                            Text("Your family is eligible for current month's kit.", fontSize = 12.sp, color = Color(0xFF2E7D32).copy(alpha = 0.7f))
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    "Receiving History",
-                    fontSize = 24.sp,
+                    "Eligibility Overview",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (isLoading) {
+                        items(2) { EligibilityMemberItem(name = "Family Member", status = "Checking...") }
+                    } else if (familyMembers.isEmpty()) {
+                        item { 
+                            EligibilityMemberItem(name = "None", status = "No family members")
+                        }
+                    } else {
+                        items(familyMembers) { member ->
+                            EligibilityMemberItem(name = member.memberName, status = "Eligible")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text(
+                    "Service Actions",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextBlack
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (historyRecords.isEmpty()) {
-                    Text(
-                        "No kit receiving history found.",
-                        fontSize = 14.sp,
-                        color = TextGray,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
+                KitActionCard(
+                    title = "Confirm Receipt",
+                    subtitle = "Verify and scan your new dental kit",
+                    icon = Icons.Default.Inventory,
+                    indicatorColor = PrimaryBlue,
+                    onClick = onConfirmKitClick
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                KitActionCard(
+                    title = "Log Monthly Usage",
+                    subtitle = "Record brushing habits for all members",
+                    icon = Icons.Default.EditCalendar,
+                    indicatorColor = Color(0xFFEF6C00),
+                    onClick = onLogUsageClick
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text(
+                    "Distribution History",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isLoadingHistory) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryBlue)
+                    }
+                } else if (distributionHistory.isEmpty()) {
+                    EmptyHistoryPlaceholder()
                 } else {
-                    historyRecords.forEach { record ->
-                        HistoryItem(title = record.title, date = record.date)
+                    distributionHistory.forEach { record ->
+                        val itemsSummary = buildString {
+                            if (record.brushReceived > 0) append("${record.brushReceived} Brushes ")
+                            if (record.pasteReceived > 0) append("${record.pasteReceived} Paste ")
+                            if (record.iecReceived > 0) append("${record.iecReceived} IEC ")
+                        }.trim()
+
+                        HistoryItem(
+                            title = if (itemsSummary.isNotEmpty()) itemsSummary else "Complete Kit",
+                            id = record.kit_unique_id,
+                            date = record.confirmed_at ?: "Processing",
+                            isDelivered = record.status == "Delivered" || record.status == "CONFIRMED",
+                            isAlert = record.show_red_alert
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
 }
 
 @Composable
-fun EligibilityMemberItem(name: String, status: String, imageRes: Int, modifier: Modifier = Modifier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.width(140.dp)
+fun KitActionCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    indicatorColor: Color,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White),
+        onClick = onClick
     ) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = name,
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF5EFE6)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextBlack)
-        Text(status, fontSize = 12.sp, color = TextGray)
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(indicatorColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = indicatorColor, modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, color = TextBlack, fontSize = 16.sp)
+                Text(subtitle, color = textGraySub, fontSize = 13.sp)
+            }
+            Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Color.LightGray)
+        }
     }
 }
 
 @Composable
-fun HistoryItem(title: String, date: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun EligibilityMemberItem(name: String, status: String) {
+    ElevatedCard(
+        modifier = Modifier.width(140.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFE9EEF3)),
-            contentAlignment = Alignment.Center
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(16.dp)
         ) {
-            Icon(Icons.Default.MedicalServices, contentDescription = null, tint = PrimaryBlue)
+            InitialsAvatar(
+                name = name,
+                modifier = Modifier.size(64.dp),
+                fontSize = 22.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextBlack, maxLines = 1)
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = if (status == "Eligible") Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+            ) {
+                Text(
+                    status,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (status == "Eligible") Color(0xFF2E7D32) else Color.Gray
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextBlack)
-            Text(date, fontSize = 14.sp, color = TextGray)
+    }
+}
+
+@Composable
+fun HistoryItem(
+    title: String,
+    id: String,
+    date: String,
+    isDelivered: Boolean,
+    isAlert: Boolean = false
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isAlert) Color(0xFFFFEBEE) else Color(0xFFF5F5F5)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isAlert) Icons.Default.ErrorOutline else Icons.Default.Inventory,
+                    contentDescription = null,
+                    tint = if (isAlert) Color(0xFFD32F2F) else PrimaryBlue,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isAlert) Color(0xFFD32F2F) else TextBlack
+                )
+                Text("Received: $date • ID: ${id.take(8).uppercase()}", fontSize = 11.sp, color = textGraySub)
+                if (isAlert) {
+                    Text("Previous kit return pending", fontSize = 10.sp, color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                }
+            }
+            if (isDelivered && !isAlert) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF43A047), modifier = Modifier.size(20.dp))
+            }
         }
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF2E7D32))
-        )
+    }
+}
+
+@Composable
+fun EmptyHistoryPlaceholder() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.LightGray)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("No kit distributions recorded yet.", color = textGraySub, fontSize = 14.sp)
     }
 }
 

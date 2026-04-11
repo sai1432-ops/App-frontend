@@ -1,5 +1,6 @@
 package com.SIMATS.digitalpds
 
+import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,7 +30,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminLoginScreen(
-    onLoginClick: (Int, String, String, String) -> Unit,
+    onLoginClick: (Int, String, String, String, String, String?) -> Unit,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -182,29 +183,20 @@ fun AdminLoginScreen(
                             if (email.isBlank()) {
                                 emailError = "Email is required"
                                 hasError = true
+                            } else if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+                                emailError = "Enter a valid email address"
+                                hasError = true
                             }
 
                             if (password.isBlank()) {
                                 passwordError = "Password is required"
                                 hasError = true
+                            } else if (password.length < 8) {
+                                passwordError = "Password must be at least 8 characters"
+                                hasError = true
                             }
 
                             if (!hasError) {
-                                // Default Admin Login
-                                if (email == "admin@gmail.com" && password == "admin123") {
-                                    Toast.makeText(
-                                        context,
-                                        "Default Admin Login Successful",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    onLoginClick(
-                                        1,
-                                        "Super Admin",
-                                        "admin@gmail.com",
-                                        "+91 98765 43210"
-                                    )
-                                    return@Button
-                                }
 
                                 isLoading = true
                                 scope.launch {
@@ -227,7 +219,7 @@ fun AdminLoginScreen(
                                                     body.message ?: "Admin Login Successful",
                                                     Toast.LENGTH_SHORT
                                                 ).show()
-                                                onLoginClick(adminId, name, respEmail, phone)
+                                                onLoginClick(adminId, name, respEmail, phone, body.token ?: "", body.profileImage)
                                             } else {
                                                 Toast.makeText(
                                                     context,
@@ -276,15 +268,6 @@ fun AdminLoginScreen(
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Default Admin: admin@gmail.com / admin123",
-                        fontSize = 13.sp,
-                        color = TextGray,
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
 

@@ -9,16 +9,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.HelpCenter
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.automirrored.filled.HelpCenter
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -32,30 +31,39 @@ import com.SIMATS.digitalpds.ui.theme.*
 fun DealerHelpSupportScreen(
     onBackClick: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundWhite)) {
+        // Top Gradient
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(DealerGreen, BackgroundWhite)
+                    )
+                )
+        )
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
                         Text(
                             "Help & Support",
-                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextBlack,
-                            modifier = Modifier.padding(end = 48.dp)
+                            color = Color.White
                         )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextBlack)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
-        containerColor = BackgroundWhite
-    ) { paddingValues ->
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -92,7 +100,7 @@ fun DealerHelpSupportScreen(
                 onClick = {}
             )
             SupportChannelItem(
-                icon = Icons.Default.HelpCenter,
+                icon = Icons.AutoMirrored.Filled.HelpCenter,
                 title = "FAQs",
                 subtitle = "Find quick answers to common questions",
                 onClick = {}
@@ -128,6 +136,7 @@ fun DealerHelpSupportScreen(
         }
     }
 }
+}
 
 @Composable
 fun SupportChannelItem(
@@ -136,32 +145,38 @@ fun SupportChannelItem(
     subtitle: String,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF1F4F4))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 8.dp)
+            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0D000000))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         Box(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(DealerSecondary),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = PrimaryBlue)
+            Icon(imageVector = icon, contentDescription = null, tint = DealerGreen)
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextBlack)
             Text(subtitle, fontSize = 12.sp, color = TextGray)
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextGray)
+        Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = TextGray)
     }
+}
 }
 
 @Preview(showBackground = true)

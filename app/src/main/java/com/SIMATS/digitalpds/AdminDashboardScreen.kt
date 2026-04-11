@@ -1,6 +1,5 @@
 package com.SIMATS.digitalpds
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,21 +13,25 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.SIMATS.digitalpds.network.AdminDashboardStats
+import com.SIMATS.digitalpds.network.AdminNotification
 import com.SIMATS.digitalpds.ui.theme.*
 
 @Composable
@@ -38,17 +41,20 @@ fun AdminDashboardScreen(
     onNavigate: (String) -> Unit = {},
     adminViewModel: AdminViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val token = remember { SessionManager(context).getAccessToken() ?: "" }
+
     LaunchedEffect(Unit) {
-        adminViewModel.fetchDashboardStats()
+        adminViewModel.fetchDashboardStats(token)
     }
 
     AdminDashboardContent(
         stats = adminViewModel.dashboardStats,
         isLoading = adminViewModel.isLoading,
         errorMessage = adminViewModel.errorMessage,
-        onNotificationClick = onNotificationClick,
         onProfileClick = onProfileClick,
-        onNavigate = onNavigate
+        onNavigate = onNavigate,
+        onRetry = { adminViewModel.fetchDashboardStats(token) }
     )
 }
 
@@ -58,193 +64,271 @@ fun AdminDashboardContent(
     stats: AdminDashboardStats?,
     isLoading: Boolean,
     errorMessage: String?,
-    onNotificationClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onNavigate: (String) -> Unit = {}
+    onNavigate: (String) -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
+    var showTechnicalDetails by remember { mutableStateOf(false) }
     val currentTab = "Home"
+    val primaryRed = Color(0xFFD32F2F)
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Admin Dashboard",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNotificationClick) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
         bottomBar = {
             AdminBottomNavigationBar(currentScreen = currentTab, onNavigate = onNavigate)
         },
         containerColor = Color(0xFFF8FBFF)
     ) { paddingValues ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFD32F2F))
-            }
-        } else if (stats != null) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Premium Gradient Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(primaryRed, primaryRed.copy(alpha = 0.85f), primaryRed.copy(alpha = 0.6f))
+                        )
+                    )
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Stats Cards Grid
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AdminStatCard(
-                        title = "Total Dealers",
-                        value = stats.totalDealers,
-                        change = stats.totalDealersChange,
-                        isPositive = stats.isDealersPositive,
-                        icon = Icons.Default.Groups,
-                        iconBg = Color(0xFFE3F2FD),
-                        iconTint = Color(0xFF1976D2),
-                        onClick = { onNavigate("Dealers") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    AdminStatCard(
-                        title = "Active Beneficiaries",
-                        value = stats.activeBeneficiaries,
-                        change = stats.activeBeneficiariesChange,
-                        isPositive = stats.isBeneficiariesPositive,
-                        icon = Icons.Default.Inventory2,
-                        iconBg = Color(0xFFE8F5E9),
-                        iconTint = Color(0xFF2E7D32),
-                        onClick = { onNavigate("Beneficiaries") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AdminStatCard(
-                        title = "Total Distributions",
-                        value = stats.totalDistributions,
-                        change = stats.totalDistributionsChange,
-                        isPositive = stats.isDistributionsPositive,
-                        icon = Icons.Default.BarChart,
-                        iconBg = Color(0xFFF3E5F5),
-                        iconTint = Color(0xFF7B1FA2),
-                        modifier = Modifier.weight(1f)
-                    )
-                    AdminStatCard(
-                        title = "Return Rate",
-                        value = stats.returnRate,
-                        change = stats.returnRateChange,
-                        isPositive = stats.isReturnRatePositive,
-                        icon = Icons.Default.Warning,
-                        iconBg = Color(0xFFFFF3E0),
-                        iconTint = Color(0xFFE65100),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Distribution Trends Chart Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Distribution Trends",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextBlack
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ChartLegendItem(color = Color(0xFF00BFA5), label = "Kits")
-                                Spacer(modifier = Modifier.width(12.dp))
-                                ChartLegendItem(color = Color(0xFF2979FF), label = "Dealers")
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        // Simple Custom Line Chart
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-                            DistributionTrendsChart()
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // X-Axis Labels
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul").forEach { month ->
-                                Text(text = month, fontSize = 10.sp, color = TextGray)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Kit Status Overview Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                // Top App Bar
+                CenterAlignedTopAppBar(
+                    title = {
                         Text(
-                            "Kit Status Overview",
+                            "Admin Dashboard",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+                )
+
+                if (isLoading && stats == null) {
+                    Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.White)
+                    }
+                } else if (stats != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Stats Cards Grid
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            AdminStatCard(
+                                title = "Total Dealers",
+                                value = stats.totalDealers ?: "0",
+                                icon = Icons.Default.Storefront,
+                                iconBg = Color(0xFFE3F2FD),
+                                iconTint = Color(0xFF1976D2),
+                                onClick = { onNavigate("Dealers") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            AdminStatCard(
+                                title = "Beneficiaries",
+                                value = stats.activeBeneficiaries ?: "0",
+                                icon = Icons.Default.Groups,
+                                iconBg = Color(0xFFE8F5E9),
+                                iconTint = Color(0xFF2E7D32),
+                                onClick = { onNavigate("Beneficiaries") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            AdminStatCard(
+                                title = "Distributions",
+                                value = stats.totalDistributions ?: "0",
+                                icon = Icons.Default.LocalShipping,
+                                iconBg = Color(0xFFF3E5F5),
+                                iconTint = Color(0xFF7B1FA2),
+                                onClick = { onNavigate("Distributions") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            AdminStatCard(
+                                title = "Returned Kits",
+                                value = stats.returnRate ?: "0%",
+                                icon = Icons.Default.AssignmentReturn,
+                                iconBg = Color(0xFFFFEBEE),
+                                iconTint = Color(0xFFD32F2F),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Quick Actions Section
+                        Text(
+                            "Quick Actions",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextBlack
+                            color = TextBlack,
+                            modifier = Modifier.padding(bottom = 16.dp, start = 4.dp)
                         )
-                        Text(
-                            "Current status of all distributed kits",
-                            fontSize = 12.sp,
-                            color = TextGray
-                        )
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        StatusProgressItem(label = "Given", percentage = stats.kitGivenPercentage, color = Color(0xFF00BFA5))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        StatusProgressItem(label = "Returned", percentage = stats.kitReturnedPercentage, color = Color(0xFFF44336))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        StatusProgressItem(label = "Pending", percentage = stats.kitPendingPercentage, color = Color(0xFF90A4AE))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x1F000000)),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                QuickActionItem(
+                                    title = "Manage Dental Clinics",
+                                    subtitle = "View, add or delete dental partner clinics",
+                                    icon = Icons.Default.LocalHospital,
+                                    iconBg = Color(0xFFE8F5E9),
+                                    iconTint = Color(0xFF2E7D32),
+                                    onClick = { onNavigate("Clinics") }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+                } else if (errorMessage != null) {
+                    Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                        Card(
+                            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = primaryRed,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Something went wrong",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextBlack
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "We couldn't load the dashboard data. Please check your connection and try again.",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(24.dp))
+                                
+                                Button(
+                                    onClick = onRetry,
+                                    colors = ButtonDefaults.buttonColors(containerColor = primaryRed),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Retry Connection")
+                                }
+                                
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                TextButton(
+                                    onClick = { showTechnicalDetails = !showTechnicalDetails }
+                                ) {
+                                    Text(
+                                        if (showTechnicalDetails) "Hide Technical Details" else "View Technical Details",
+                                        color = primaryRed.copy(alpha = 0.7f),
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                
+                                if (showTechnicalDetails) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = errorMessage,
+                                            modifier = Modifier.padding(12.dp).verticalScroll(rememberScrollState()),
+                                            fontSize = 11.sp,
+                                            color = Color.DarkGray,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        } else if (errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = errorMessage, color = Color.Red)
             }
         }
+    }
+}
+
+@Composable
+fun QuickActionItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconBg: Color,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(48.dp),
+            shape = CircleShape,
+            color = iconBg
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                subtitle,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                lineHeight = 16.sp
+            )
+        }
+        Icon(
+            imageVector = Icons.Filled.ArrowForward,
+            contentDescription = null,
+            tint = Color.LightGray
+        )
     }
 }
 
@@ -301,8 +385,6 @@ fun AdminBottomNavigationBar(currentScreen: String, onNavigate: (String) -> Unit
 fun AdminStatCard(
     title: String,
     value: String,
-    change: String,
-    isPositive: Boolean,
     icon: ImageVector,
     iconBg: Color,
     iconTint: Color,
@@ -310,148 +392,29 @@ fun AdminStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        modifier = modifier
+            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x1A000000))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Column(modifier = Modifier.padding(20.dp)) {
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = iconBg
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(iconBg),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(contentAlignment = Alignment.Center) {
                     Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
-                }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = change,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
-                    )
-                    Icon(
-                        imageVector = if (isPositive) Icons.Default.NorthEast else Icons.Default.SouthEast,
-                        contentDescription = null,
-                        tint = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336),
-                        modifier = Modifier.size(12.dp)
-                    )
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextBlack)
-            Text(text = title, fontSize = 12.sp, color = TextGray)
+            Text(text = value, fontSize = 26.sp, fontWeight = FontWeight.Black, color = TextBlack)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = title, fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
         }
-    }
-}
-
-@Composable
-fun ChartLegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = label, fontSize = 12.sp, color = TextGray)
-    }
-}
-
-@Composable
-fun StatusProgressItem(label: String, percentage: Int, color: Color) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextBlack)
-            }
-            Text(text = "$percentage%", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { percentage.toFloat() / 100f },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = color,
-            trackColor = Color(0xFFF1F4F4)
-        )
-    }
-}
-
-@Composable
-fun DistributionTrendsChart() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
-        
-        // Kits line (Teal) - Wave pattern
-        val kitPoints = listOf(
-            Offset(0f, height * 0.8f),
-            Offset(width * 0.2f, height * 0.7f),
-            Offset(width * 0.4f, height * 0.4f),
-            Offset(width * 0.5f, height * 0.1f),
-            Offset(width * 0.6f, height * 0.9f),
-            Offset(width * 0.8f, height * 0.7f),
-            Offset(width, height * 0.5f)
-        )
-        
-        val kitPath = Path().apply {
-            moveTo(kitPoints[0].x, kitPoints[0].y)
-            for (i in 1 until kitPoints.size) {
-                cubicTo(
-                    (kitPoints[i-1].x + kitPoints[i].x) / 2, kitPoints[i-1].y,
-                    (kitPoints[i-1].x + kitPoints[i].x) / 2, kitPoints[i].y,
-                    kitPoints[i].x, kitPoints[i].y
-                )
-            }
-        }
-        
-        // Draw Fill for Kits
-        val fillPath = Path().apply {
-            addPath(kitPath)
-            lineTo(width, height)
-            lineTo(0f, height)
-            close()
-        }
-        drawPath(
-            path = fillPath,
-            brush = Brush.verticalGradient(
-                colors = listOf(Color(0xFF00BFA5).copy(alpha = 0.1f), Color.Transparent)
-            )
-        )
-        
-        // Draw Line for Kits
-        drawPath(
-            path = kitPath,
-            color = Color(0xFF00BFA5),
-            style = Stroke(width = 3.dp.toPx())
-        )
-        
-        // Dealers line (Blue) - Flat/Slightly rising line
-        drawLine(
-            color = Color(0xFF2979FF),
-            start = Offset(0f, height * 0.9f),
-            end = Offset(width, height * 0.88f),
-            strokeWidth = 3.dp.toPx()
-        )
     }
 }
 
@@ -460,23 +423,7 @@ fun DistributionTrendsChart() {
 fun AdminDashboardPreview() {
     DigitalpdsTheme {
         AdminDashboardContent(
-            stats = AdminDashboardStats(
-                totalDealers = "45",
-                totalDealersChange = "12%",
-                isDealersPositive = true,
-                activeBeneficiaries = "1,240",
-                activeBeneficiariesChange = "5%",
-                isBeneficiariesPositive = true,
-                totalDistributions = "8,450",
-                totalDistributionsChange = "2%",
-                isDistributionsPositive = true,
-                returnRate = "1.2%",
-                returnRateChange = "0.5%",
-                isReturnRatePositive = false,
-                kitGivenPercentage = 75,
-                kitReturnedPercentage = 15,
-                kitPendingPercentage = 10
-            ),
+            stats = null,
             isLoading = false,
             errorMessage = null
         )

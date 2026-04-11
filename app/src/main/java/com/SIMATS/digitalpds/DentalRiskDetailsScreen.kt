@@ -21,223 +21,259 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.ui.theme.textGraySub
+
+import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DentalRiskDetailsScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onHomeClick: () -> Unit = {},
+    onKitsClick: () -> Unit = {},
+    onLearnClick: () -> Unit = {},
+    onConsultClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "Dental Risk Details",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextBlack
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
+        bottomBar = {
+            UserBottomNavigationBar(
+                currentScreen = "Profile",
+                onHomeClick = onHomeClick,
+                onKitsClick = onKitsClick,
+                onLearnClick = onLearnClick,
+                onConsultClick = onConsultClick,
+                onProfileClick = onProfileClick
             )
         },
-        bottomBar = {
-            NavigationBar(
-                containerColor = BackgroundWhite,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home", tint = Color.Black) },
-                    label = { Text("Home", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.ShoppingBag, contentDescription = "Kits", tint = Color.Black) },
-                    label = { Text("Kits", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.School, contentDescription = "Learn", tint = Color.Black) },
-                    label = { Text("Learn", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.ChatBubbleOutline, contentDescription = "Consult", tint = Color.Black) },
-                    label = { Text("Consult", color = Color.Black) }
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profile", tint = Color.Black) },
-                    label = { Text("Profile", color = Color.Black) }
-                )
-            }
-        },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Dental Risk Level Card at top
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // Gradient Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Dental Risk Level",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                    Text(
-                        "Moderate",
-                        fontSize = 16.sp,
-                        color = TextGray
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE9EEF3)),
-                        modifier = Modifier.height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("View Details", color = TextBlack, fontSize = 12.sp)
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = TextBlack, modifier = Modifier.size(14.dp))
-                        }
-                    }
-                }
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFFD54F)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = Color.Black.copy(alpha = 0.6f)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            "Dental Risk Analysis",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Detailed breakdown of your oral health assessment and risk factors.",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Risk Metrics
-            RiskMetricItem("Cavity Risk", "60/100", 0.6f, "Moderate risk of cavities, maintain good oral hygiene")
             Spacer(modifier = Modifier.height(24.dp))
-            RiskMetricItem("Gum Health", "50/100", 0.5f, "Moderate gum health, consider professional cleaning")
-            Spacer(modifier = Modifier.height(24.dp))
-            RiskMetricItem("Plaque Level", "40/100", 0.4f, "Moderate plaque buildup, improve brushing technique")
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // Risk Overview Card
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(24.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Overall Assessment",
+                                fontSize = 14.sp,
+                                color = textGraySub,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "Moderate Risk",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextBlack
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                color = Color(0xFFFFB300).copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    "Requires Attention",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    color = Color(0xFFFFB300),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFB300).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = Color(0xFFFFB300)
+                            )
+                        }
+                    }
+                }
 
-            // Doctor's Note Section
-            Text(
-                "Doctor's Note",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Based on your assessment, your dental risk is moderate. This means there are some areas of concern that need attention to prevent further issues. Regular check-ups and improved oral hygiene practices are recommended.",
-                fontSize = 15.sp,
-                color = TextBlack,
-                lineHeight = 22.sp
-            )
+                Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    "Risk Metrics",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Preventive Actions
-            Text(
-                "Preventive Actions",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            ActionItem(icon = Icons.Default.MedicalServices, label = "Use Fluoride Paste")
-            ActionItem(icon = Icons.Default.MoneyOff, label = "Reduce Sugar Intake")
-            ActionItem(icon = Icons.Default.Brush, label = "Brush Twice Daily")
-            ActionItem(icon = Icons.Default.CleaningServices, label = "Floss Regularly")
+                // Risk Metrics List
+                RiskMetricItem("Cavity Potential", "60/100", 0.6f, "Early signs detected, needs focus.", Color(0xFFEF6C00))
+                Spacer(modifier = Modifier.height(20.dp))
+                RiskMetricItem("Gum Health", "50/100", 0.5f, "Marginal inflammation noted.", Color(0xFFFFB300))
+                Spacer(modifier = Modifier.height(20.dp))
+                RiskMetricItem("Plaque Accumulation", "40/100", 0.4f, "Improve interdental cleaning.", Color(0xFF2E7D32))
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Clinician's Summary
+                Text(
+                    "Clinician's Summary",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFFF1F8E9))
+                ) {
+                    Text(
+                        text = "Your current assessment indicates a moderate overall risk. Specifically, we've identified early-stage caries risk and mild gingival markers. Consistent adherence to the recommended preventive protocol is essential to reverse these findings.",
+                        fontSize = 14.sp,
+                        color = Color(0xFF2E7D32),
+                        lineHeight = 22.sp,
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Preventive Protocol
+                Text(
+                    "Preventive Protocol",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ActionItem(icon = Icons.Default.MedicalServices, label = "Biological Fluoride Application", desc = "Apply twice a day after meals.")
+                ActionItem(icon = Icons.Default.Fastfood, label = "Sugar-Controlled Diet", desc = "Limit fermentable carbohydrates.")
+                ActionItem(icon = Icons.Default.Brush, label = "Standardized Brushing", desc = "Use soft-bristled brush, 2 mins.")
+                ActionItem(icon = Icons.Default.CleaningServices, label = "Interdental Care", desc = "Floss or use interdental brushes daily.")
+
+                Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }
 
 @Composable
-fun RiskMetricItem(title: String, score: String, progress: Float, description: String) {
+fun RiskMetricItem(title: String, score: String, progress: Float, description: String, indicatorColor: Color) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
         ) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-            Text(score, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+            Text(score, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = indicatorColor)
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp)),
-            color = Color.Black,
-            trackColor = Color.LightGray.copy(alpha = 0.3f)
+            color = indicatorColor,
+            trackColor = indicatorColor.copy(alpha = 0.1f)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(description, fontSize = 14.sp, color = TextBlack)
+        Text(description, fontSize = 13.sp, color = textGraySub)
     }
 }
 
 @Composable
-fun ActionItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
-    Row(
+fun ActionItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, desc: String) {
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFE9EEF3)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = Color(0xFF455A64))
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(PrimaryBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = PrimaryBlue)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+                Text(text = desc, fontSize = 12.sp, color = textGraySub)
+            }
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = label, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = TextBlack)
     }
 }
 

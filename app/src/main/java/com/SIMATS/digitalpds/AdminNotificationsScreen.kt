@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,97 +26,79 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.SIMATS.digitalpds.network.AdminNotification
+import com.SIMATS.digitalpds.network.AdminNotificationType
 import com.SIMATS.digitalpds.ui.theme.*
-
-data class AdminNotification(
-    val id: String,
-    val title: String,
-    val message: String,
-    val time: String,
-    val type: NotificationType,
-    val isRead: Boolean = false
-)
-
-enum class NotificationType {
-    STOCK_REQUEST, NEW_DEALER, ALERT, GENERAL
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminNotificationsScreen(
     onBackClick: () -> Unit = {},
-    onNotificationClick: (AdminNotification) -> Unit = {}
+    onNotificationClick: (AdminNotification) -> Unit = {},
+    adminViewModel: AdminViewModel = viewModel()
 ) {
-    // Mock Notifications Data
-    val notifications = listOf(
-        AdminNotification(
-            "1",
-            "New Stock Request",
-            "Dealer @jdoe_dealer has requested 500 Adult Brushes.",
-            "2 mins ago",
-            NotificationType.STOCK_REQUEST,
-            isRead = false
-        ),
-        AdminNotification(
-            "2",
-            "Dealer Registration",
-            "New dealer application received from Robert Smith.",
-            "1 hour ago",
-            NotificationType.NEW_DEALER,
-            isRead = false
-        ),
-        AdminNotification(
-            "3",
-            "Low Stock Alert",
-            "Central warehouse is running low on Fluoride Paste.",
-            "3 hours ago",
-            NotificationType.ALERT,
-            isRead = true
-        ),
-        AdminNotification(
-            "4",
-            "System Update",
-            "DigitalPDS version 2.1.0 is now live with new reporting features.",
-            "Yesterday",
-            NotificationType.GENERAL,
-            isRead = true
-        ),
-        AdminNotification(
-            "5",
-            "Stock Request Approved",
-            "Stock request #SR-9921 for Dealer @jsmith has been dispatched.",
-            "2 days ago",
-            NotificationType.STOCK_REQUEST,
-            isRead = true
-        )
-    )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        val token = com.SIMATS.digitalpds.SessionManager(context).getAccessToken() ?: ""
+        adminViewModel.fetchNotifications(token)
+    }
+
+    val notifications = adminViewModel.notifications
+    val isLoading = adminViewModel.isLoading
+    val errorMessage = adminViewModel.errorMessage
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notifications", fontWeight = FontWeight.Bold) },
+                title = { Text("Notifications", fontWeight = FontWeight.Bold, color = TextBlack) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextBlack)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
             )
         },
         containerColor = Color(0xFFF8FBFF)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(notifications) { notification ->
-                NotificationItem(
-                    notification = notification,
-                    onClick = { onNotificationClick(notification) }
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            if (isLoading && notifications.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFFD32F2F))
+            } else if (errorMessage != null && notifications.isEmpty()) {
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 )
+            } else if (notifications.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.LightGray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No notifications yet", color = TextGray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(notifications) { notification ->
+                        NotificationItem(
+                            notification = notification,
+                            onClick = { onNotificationClick(notification) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -131,22 +114,22 @@ fun NotificationItem(
     val iconBgColor: Color
 
     when (notification.type) {
-        NotificationType.STOCK_REQUEST -> {
+        AdminNotificationType.STOCK_REQUEST -> {
             icon = Icons.Default.Inventory
             iconColor = Color(0xFF1976D2)
             iconBgColor = Color(0xFFE3F2FD)
         }
-        NotificationType.NEW_DEALER -> {
+        AdminNotificationType.NEW_DEALER -> {
             icon = Icons.Default.PersonAdd
             iconColor = Color(0xFF2E7D32)
             iconBgColor = Color(0xFFE8F5E9)
         }
-        NotificationType.ALERT -> {
+        AdminNotificationType.ALERT -> {
             icon = Icons.Default.Warning
             iconColor = Color(0xFFD32F2F)
             iconBgColor = Color(0xFFFFEBEE)
         }
-        NotificationType.GENERAL -> {
+        AdminNotificationType.GENERAL -> {
             icon = Icons.Default.Notifications
             iconColor = Color(0xFF7B1FA2)
             iconBgColor = Color(0xFFF3E5F5)
@@ -223,5 +206,9 @@ fun NotificationItem(
 @Preview(showBackground = true)
 @Composable
 fun AdminNotificationsScreenPreview() {
-    AdminNotificationsScreen()
+    DigitalpdsTheme {
+        AdminNotificationsScreen(
+            adminViewModel = viewModel()
+        )
+    }
 }

@@ -7,6 +7,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -32,9 +37,6 @@ fun AdminAddClinicScreen(
     val scope = rememberCoroutineScope()
 
     var clinicName by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var district by remember { mutableStateOf("") }
-    var contactNumber by remember { mutableStateOf("") }
     var website by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
 
@@ -60,78 +62,114 @@ fun AdminAddClinicScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Enter clinic details for users to consult.", color = Color.Gray)
-
-            OutlinedTextField(
-                value = clinicName,
-                onValueChange = { clinicName = it },
-                label = { Text("Clinic Name") },
+            // Header Section
+            ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
+                colors = CardDefaults.elevatedCardColors(containerColor = PrimaryBlue.copy(alpha = 0.1f)),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalHospital,
+                        contentDescription = "Hospital",
+                        tint = PrimaryBlue,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            "New Dental Partner",
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryBlue,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "Register a regional clinic for beneficiary care.",
+                            color = Color.DarkGray,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
 
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = { Text("Address") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                minLines = 2
-            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = district,
-                onValueChange = { district = it },
-                label = { Text("District") },
+            // Form Section
+            ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
+                colors = CardDefaults.elevatedCardColors(containerColor = Color.White),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        "Clinic Details",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.DarkGray
+                    )
 
-            OutlinedTextField(
-                value = contactNumber,
-                onValueChange = { contactNumber = it },
-                label = { Text("Contact Number") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
+                    OutlinedTextField(
+                        value = clinicName,
+                        onValueChange = { clinicName = it },
+                        label = { Text("Clinic Name") },
+                        leadingIcon = {
+                            Icon(Icons.Default.LocalHospital, contentDescription = "Clinic Name", tint = PrimaryBlue)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            focusedLabelColor = PrimaryBlue
+                        )
+                    )
 
-            OutlinedTextField(
-                value = website,
-                onValueChange = { website = it },
-                label = { Text("Website URL (Optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                placeholder = { Text("https://example.com") }
-            )
+                    OutlinedTextField(
+                        value = website,
+                        onValueChange = { website = it },
+                        label = { Text("Website URL (Optional)") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Language, contentDescription = "Website", tint = PrimaryBlue)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        placeholder = { Text("https://example.com") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryBlue,
+                            focusedLabelColor = PrimaryBlue
+                        )
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    if (clinicName.isBlank() || address.isBlank() || district.isBlank() || contactNumber.isBlank()) {
-                        Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
+                    if (clinicName.isBlank()) {
+                        Toast.makeText(context, "Please enter a clinic name", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
                     isSubmitting = true
                     scope.launch {
                         try {
-                            // Using the existing addClinic endpoint from ApiService
-                            // ClinicRequest(clinicName, address, district, contactNumber, latitude, longitude, bookingAvailable)
                             val request = ClinicRequest(
                                 clinicName = clinicName,
-                                address = address,
-                                district = district,
-                                contactNumber = contactNumber,
-                                bookingAvailable = true
-                                // website can be sent in a Map if the backend supports it, 
-                                // but for now we follow the existing data class
+                                website = if (website.isNotBlank()) website else null
                             )
-                            
-                            // If backend supports website, we might need to update ClinicRequest or send as Map
-                            // Let's try sending as Map to include website if ApiService allows or if we can change it
-                            val response = RetrofitClient.apiService.addClinic(request)
-                            
+                            val token = com.SIMATS.digitalpds.SessionManager(context).getAccessToken() ?: ""
+                            val response = com.SIMATS.digitalpds.network.RetrofitClient.apiService.addClinic("Bearer $token", request)
+
                             if (response.isSuccessful) {
                                 Toast.makeText(context, "Clinic added successfully!", Toast.LENGTH_SHORT).show()
                                 onBackClick()
@@ -151,13 +189,24 @@ fun AdminAddClinicScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
                 enabled = !isSubmitting
             ) {
-                if (isSubmitting) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                else Text("Add Clinic", fontWeight = FontWeight.Bold)
+                if (isSubmitting) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.LocalHospital,
+                        contentDescription = "Add",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Clinic", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                }
             }
         }
     }

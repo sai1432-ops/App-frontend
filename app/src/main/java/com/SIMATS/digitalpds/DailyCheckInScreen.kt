@@ -26,8 +26,14 @@ import androidx.compose.ui.unit.sp
 import com.SIMATS.digitalpds.network.CheckinRequest
 import com.SIMATS.digitalpds.network.FamilyMemberResponse
 import com.SIMATS.digitalpds.network.RetrofitClient
+import com.SIMATS.digitalpds.notification.CheckInPrefs
 import com.SIMATS.digitalpds.ui.theme.*
+import com.SIMATS.digitalpds.ui.theme.textGraySub
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,92 +53,110 @@ fun DailyCheckInScreen(
     var brushedFamilyMemberIds by remember { mutableStateOf(setOf<Int>()) }
     var isSubmitting by remember { mutableStateOf(false) }
 
+    val softBlue = PrimaryBlue
+    val cyanGradient = Color(0xFF00BCD4)
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Daily Brushing Check-in",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextBlack
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextBlack
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundWhite)
-            )
-        },
-        containerColor = BackgroundWhite
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Session Mode",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // Gradient Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(Brush.linearGradient(colors = listOf(softBlue, cyanGradient)))
             ) {
-                RadioButton(
-                    selected = selectedSession == "Morning",
-                    onClick = { selectedSession = "Morning" },
-                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryBlue)
-                )
-                Text("Morning", modifier = Modifier.clickable { selectedSession = "Morning" })
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-                RadioButton(
-                    selected = selectedSession == "Evening",
-                    onClick = { selectedSession = "Evening" },
-                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryBlue)
-                )
-                Text("Evening", modifier = Modifier.clickable { selectedSession = "Evening" })
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 40.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                        
+                        Text(
+                            "Daily Habits",
+                            modifier = Modifier.align(Alignment.Center),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Session Toggle
+                    Surface(
+                        color = Color.White.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(modifier = Modifier.padding(4.dp)) {
+                            SessionChip(
+                                label = "Morning",
+                                icon = Icons.Default.LightMode,
+                                isSelected = selectedSession == "Morning",
+                                onClick = { selectedSession = "Morning" }
+                            )
+                            SessionChip(
+                                label = "Evening",
+                                icon = Icons.Default.DarkMode,
+                                isSelected = selectedSession == "Evening",
+                                onClick = { selectedSession = "Evening" }
+                            )
+                        }
+                    }
+                }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Mark who brushed today",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 24.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                BrushingMemberCard(
-                    name = "$userName (Me)",
-                    isBrushed = isPrimaryUserChecked,
-                    onToggle = { isPrimaryUserChecked = !isPrimaryUserChecked }
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Text(
+                    "Brushing Tracker",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack
+                )
+                Text(
+                    "Mark who brushed in this session",
+                    fontSize = 14.sp,
+                    color = textGraySub
                 )
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Primary User Card
+                ModernBrushingMemberCard(
+                    name = "$userName (Me)",
+                    isBrushed = isPrimaryUserChecked,
+                    onToggle = { isPrimaryUserChecked = !isPrimaryUserChecked },
+                    accent = softBlue
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Family Members
                 familyMembers.forEach { member ->
-                    BrushingMemberCard(
+                    ModernBrushingMemberCard(
                         name = member.memberName,
                         isBrushed = brushedFamilyMemberIds.contains(member.id),
                         onToggle = {
@@ -142,134 +166,132 @@ fun DailyCheckInScreen(
                                 } else {
                                     brushedFamilyMemberIds + member.id
                                 }
-                        }
+                        },
+                        accent = softBlue
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+                
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    isSubmitting = true
-                    scope.launch {
-                        try {
-                            val sessionValue = selectedSession.uppercase()
-                            var anySuccess = false
-
-                            if (isPrimaryUserChecked) {
-                                val response = RetrofitClient.apiService.brushingCheckIn(
-                                    CheckinRequest(userId, null, sessionValue)
-                                )
-                                if (response.isSuccessful) anySuccess = true
-                            }
-
-                            brushedFamilyMemberIds.forEach { memberId ->
-                                val response = RetrofitClient.apiService.brushingCheckIn(
-                                    CheckinRequest(userId, memberId, sessionValue)
-                                )
-                                if (response.isSuccessful) anySuccess = true
-                            }
-
-                            if (anySuccess) {
-                                Toast.makeText(
-                                    context,
-                                    "Check-in updated successfully!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                onCheckInSuccess()
-                            } else {
-                                Toast.makeText(context, "Check-in failed", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isSubmitting = false
-                        }
-                    }
-                },
+            // Bottom Action
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                enabled = (isPrimaryUserChecked || brushedFamilyMemberIds.isNotEmpty()) && !isSubmitting,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryBlue,
-                    contentColor = Color.White
-                )
+                    .background(Color.White)
+                    .padding(24.dp)
             ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Updating...", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                } else {
-                    Text("Confirm Check-in", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = {
+                        isSubmitting = true
+                        scope.launch {
+                            try {
+                                val sessionValue = selectedSession.uppercase()
+                                var anySuccess = false
+
+                                if (isPrimaryUserChecked) {
+                                    val response = RetrofitClient.apiService.brushingCheckIn(
+                                        "Bearer ${SessionManager(context).getAccessToken() ?: ""}",
+                                        CheckinRequest(userId, null, sessionValue)
+                                    )
+                                    if (response.isSuccessful) {
+                                        anySuccess = true
+                                        if (sessionValue == "MORNING") CheckInPrefs.setMorningCheckedIn(context, true)
+                                        else CheckInPrefs.setEveningCheckedIn(context, true)
+                                    }
+                                }
+
+                                brushedFamilyMemberIds.forEach { memberId ->
+                                    val response = RetrofitClient.apiService.brushingCheckIn(
+                                        "Bearer ${SessionManager(context).getAccessToken() ?: ""}",
+                                        CheckinRequest(userId, memberId, sessionValue)
+                                    )
+                                    if (response.isSuccessful) anySuccess = true
+                                }
+
+                                if (anySuccess) {
+                                    Toast.makeText(context, "Check-in successful!", Toast.LENGTH_SHORT).show()
+                                    onCheckInSuccess()
+                                } else {
+                                    Toast.makeText(context, "Check-in failed", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp).shadow(8.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = (isPrimaryUserChecked || brushedFamilyMemberIds.isNotEmpty()) && !isSubmitting,
+                    colors = ButtonDefaults.buttonColors(containerColor = softBlue)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Confirm Check-in", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-fun BrushingMemberCard(
-    name: String,
-    isBrushed: Boolean,
-    onToggle: () -> Unit
-) {
-    Card(
+fun SessionChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = if (isBrushed) BorderStroke(2.dp, PrimaryBlue) else null
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        color = if (isSelected) Color.White else Color.Transparent,
+        contentColor = if (isSelected) PrimaryBlue else Color.White
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isBrushed) PrimaryBlue.copy(alpha = 0.1f)
-                            else Color(0xFFF0F2F5)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = if (isBrushed) PrimaryBlue else Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+            Icon(icon, null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Text(
-                    text = name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextBlack
+@Composable
+fun ModernBrushingMemberCard(name: String, isBrushed: Boolean, onToggle: () -> Unit, accent: Color) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .then(if (isBrushed) Modifier.border(1.dp, accent, RoundedCornerShape(20.dp)) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = if (isBrushed) accent.copy(alpha = 0.05f) else Color.White)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = if (isBrushed) accent else Color(0xFFF1F5F9)
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    null,
+                    modifier = Modifier.padding(12.dp),
+                    tint = if (isBrushed) Color.White else Color.Gray
                 )
             }
-
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(name, modifier = Modifier.weight(1f), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+            
             Checkbox(
                 checked = isBrushed,
                 onCheckedChange = { onToggle() },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = PrimaryBlue,
-                    uncheckedColor = Color.LightGray
-                )
+                colors = CheckboxDefaults.colors(checkedColor = accent, uncheckedColor = Color(0xFFE2E8F0))
             )
         }
     }
